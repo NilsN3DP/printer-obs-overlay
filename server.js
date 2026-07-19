@@ -51,6 +51,18 @@ function inferModel(p) {
   return 'custom';
 }
 
+function normalizeSlots(slots = []) {
+  if (!Array.isArray(slots)) return [];
+  return slots.slice(0, 8).map((slot, index) => ({
+    slot: Math.max(1, Math.min(8, Number(slot?.slot ?? index + 1) || index + 1)),
+    brand: String(slot?.brand || '').trim(),
+    material: String(slot?.material || '').trim(),
+    name: String(slot?.name || '').trim(),
+    color: /^#[0-9a-f]{6}$/i.test(String(slot?.color || '')) ? String(slot.color) : '',
+    empty: Boolean(slot?.empty),
+  }));
+}
+
 const CONFIG_CANDIDATES = [
   ...(process.env.CONFIG_PATH ? [process.env.CONFIG_PATH] : []),
   path.join(__dirname, 'config.json'),
@@ -128,6 +140,7 @@ function normalizeConfig(cfg) {
         // g pro Toolwechsel fuer die Waste-Schaetzung, wenn der Slicer keine
         // Wipe-/Purge-Gramm mitschreibt (0 = Fallback aus)
         wasteGramsPerChange: Number(p.wasteGramsPerChange ?? cfg.wasteGramsPerChange ?? 0) || 0,
+        slots: normalizeSlots(p.slots),
       };
     })
     .filter((p) => {
@@ -161,6 +174,7 @@ function normalizeConfig(cfg) {
       cameraUrl: '',
       model: 'coreone-indx',
       wasteGramsPerChange: 0.022,
+      slots: normalizeSlots(Array.from({ length: 8 }, (_, i) => ({ slot: i + 1, empty: i > 3 }))),
     });
   }
   return {
@@ -224,6 +238,7 @@ function publicConfig() {
       passwordSet: Boolean(p.password),
       cameraUrl: p.cameraUrl || '',
       wasteGramsPerChange: p.wasteGramsPerChange,
+      slots: p.slots,
     })),
   };
 }
@@ -253,6 +268,7 @@ function persistConfig(nextPublic) {
           password,
           cameraUrl: String(p.cameraUrl || ''),
           wasteGramsPerChange: Number(p.wasteGramsPerChange || 0),
+          slots: normalizeSlots(p.slots),
         };
       }),
   };
@@ -271,6 +287,7 @@ let configSource = loaded.source;
 
 // Live state per printer id
 const states = new Map();
+const swapTrackers = new Map();
 function initialState(type) {
   return {
     connected: false,
@@ -636,16 +653,59 @@ async function ensureJobMeta(printer) {
 /** Firmware-Felder haben Vorrang; fehlende Werte kommen aus den G-Code-Metadaten. */
 function enrichState(printerId, state) {
   const meta = jobMeta.get(printerId)?.meta;
-  if (!meta || !state?.printer || !state.job) return state;
+  if (!state?.printer || !state.job) return state;
   const printerCfg = config.printers.find((p) => p.id === printerId);
-  const derived = computeLive(meta, typeof state.job.progress === 'number' ? state.job.progress : null, {
+  const derived = meta ? computeLive(meta, typeof state.job.progress === 'number' ? state.job.progress : null, {
     wasteGramsPerChange: printerCfg?.wasteGramsPerChange,
-  });
+    timeRemainingSec: state.job.time_remaining,
+  }) : {};
   const printer = { ...state.printer };
   for (const [k, v] of Object.entries(derived)) {
     if (printer[k] === undefined || printer[k] === null) printer[k] = v;
   }
+  applyPrusaLinkExtras(printerId, printer, state.job, printerCfg, meta);
   return { ...state, printer };
+}
+
+function slotDisplayName(slot) {
+  return [slot?.brand, slot?.name, slot?.material]
+    .map((part) => String(part || '').trim())
+    .filter((part, index, all) => part && all.findIndex((other) => other.toLowerCase() === part.toLowerCase()) === index)
+    .join(' ');
+}
+
+function applyPrusaLinkExtras(printerId, printer, job, printerCfg, meta) {
+  const slots = normalizeSlots(printerCfg?.slots);
+  if (slots.length) {
+    printer.filament_slots = slots;
+    const active = slots.find((slot) => slot.slot === Number(printer.tool));
+    if (active && !active.empty) {
+      if (active.material) printer.material = active.material;
+      if (active.color) printer.filament_color = active.color;
+      printer.filament_brand = active.brand || undefined;
+      printer.filament_name = active.name || undefined;
+      printer.filament_display = slotDisplayName(active) || printer.material;
+    }
+    printer.tools_total = Math.max(Number(printer.tools_total) || 0, ...slots.map((slot) => slot.slot));
+  }
+
+  const actual = Number(printer.temp_nozzle);
+  const target = Number(printer.target_nozzle);
+  const progress = Number(job?.progress);
+  const printing = String(printer.state || '').toUpperCase().includes('PRINT');
+  const toolchanger = Boolean(modelCapabilities(printerCfg?.model).toolchanger);
+  const toolEvents = meta?.toolEvents || [];
+  const nearToolchange = toolEvents.length === 0
+    || toolEvents.some((event) => Math.abs(event.pe - progress) <= 1.25);
+  const now = Date.now();
+  const previous = swapTrackers.get(printerId) || { active: false, until: 0 };
+  const deepDip = toolchanger && printing && target >= 150 && actual > 0 && target - actual >= 12 && nearToolchange;
+  const recovered = !Number.isFinite(actual) || !Number.isFinite(target) || target - actual < 6;
+  let active = deepDip || (previous.active && !recovered && previous.until > now);
+  if (!printing) active = false;
+  const tracker = { active, until: deepDip ? now + 90_000 : previous.until };
+  swapTrackers.set(printerId, tracker);
+  if (printer.swap_in_progress == null) printer.swap_in_progress = tracker.active;
 }
 
 pollAll();
