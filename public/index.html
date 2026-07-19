@@ -54,27 +54,6 @@
       </div>
     </section>
 
-    <section class="panel">
-      <div class="panel-head">
-        <div>
-          <span class="field-label">Branding</span>
-          <h2>Auftritt</h2>
-        </div>
-      </div>
-      <div class="form-grid single">
-        <label><span class="field-label">Branding-Name</span><input type="text" id="brandText" maxlength="32" value="N3DP_de" /></label>
-        <label><span class="field-label">Akzentfarbe</span><input type="color" id="accentColor" value="#fa6831" /></label>
-      </div>
-      <div class="social-grid">
-        <label><input type="checkbox" data-social-toggle="youtube" /> YouTube</label>
-        <label><input type="checkbox" data-social-toggle="instagram" /> Instagram</label>
-        <label><input type="checkbox" data-social-toggle="tiktok" /> TikTok</label>
-        <label><input type="checkbox" data-social-toggle="twitch" /> Twitch</label>
-        <label><input type="checkbox" data-social-toggle="website" /> Website</label>
-      </div>
-      <p class="hint">Die Social-Auswahl steuert, welche Symbole oder Labels im Overlay sichtbar sind.</p>
-    </section>
-
     <section class="panel span-all">
       <div class="overlay-workbench">
         <div>
@@ -93,6 +72,20 @@
             <div class="segmented compact-segmented" id="layoutGroup">
               <label><input type="radio" name="layout" value="bar" checked /> Leiste unten</label>
               <label><input type="radio" name="layout" value="card" /> Karte frei platzierbar</label>
+            </div>
+          </div>
+          <div class="field overlay-branding">
+            <span class="field-label">Branding im Overlay</span>
+            <div class="form-grid single">
+              <label><span class="field-label">Name</span><input type="text" id="brandText" maxlength="32" value="N3DP_de" /></label>
+              <label><span class="field-label">Akzentfarbe</span><input type="color" id="accentColor" value="#fa6831" /></label>
+            </div>
+            <div class="social-grid">
+              <label><input type="checkbox" data-social-toggle="youtube" /> YouTube</label>
+              <label><input type="checkbox" data-social-toggle="instagram" /> Instagram</label>
+              <label><input type="checkbox" data-social-toggle="tiktok" /> TikTok</label>
+              <label><input type="checkbox" data-social-toggle="twitch" /> Twitch</label>
+              <label><input type="checkbox" data-social-toggle="website" /> Website</label>
             </div>
           </div>
           <div class="field">
