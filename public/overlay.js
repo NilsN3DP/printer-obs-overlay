@@ -19,6 +19,7 @@ const activeSections = sectionsParam
 
 const POLL_MS = Number(params.get('poll')) || 2000;
 const STATUS_URL = `/api/status${printerId ? `?printer=${encodeURIComponent(printerId)}` : ''}`;
+const TOOLCHANGE_SECTIONS = ['changes', 'tool', 'slots', 'waste'];
 
 document.body.classList.add(`layout-${layout}`);
 if (accent && /^#[0-9a-fA-F]{6}$/.test(accent)) {
@@ -116,6 +117,14 @@ function formatDuration(totalSeconds) {
   return `${m}m ${String(s % 60).padStart(2, '0')}s`;
 }
 
+function applyToolchangeAvailability(hasToolchanges) {
+  for (const key of TOOLCHANGE_SECTIONS) {
+    document.querySelectorAll(`[data-section="${key}"]`).forEach((node) => {
+      node.classList.toggle('data-unavailable', !hasToolchanges);
+    });
+  }
+}
+
 function formatClockFromNow(seconds) {
   if (!Number.isFinite(Number(seconds))) return '--:--';
   return new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' })
@@ -186,6 +195,8 @@ function render(data) {
 
   const changesDone = printer.filament_changes;
   const changesTotal = printer.filament_changes_total;
+  const hasToolchanges = Number(changesTotal) > 0 || Number(changesDone) > 0;
+  applyToolchangeAvailability(hasToolchanges);
   if (changesTotal != null) {
     el.statChanges.textContent = `${changesDone ?? 0} / ${changesTotal}`;
   } else {
@@ -273,6 +284,7 @@ async function poll() {
 }
 
 applySections();
+applyToolchangeAvailability(false);
 loadPrinterName();
 poll();
 setInterval(poll, POLL_MS);
