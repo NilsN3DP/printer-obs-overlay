@@ -6,14 +6,14 @@ const ALL_SECTIONS = [
 
 const params = new URLSearchParams(window.location.search);
 const printerId = params.get('printer') || '';
-const layout = params.get('layout') === 'card' ? 'card' : 'bar';
+let layout = params.get('layout') === 'card' ? 'card' : 'bar';
 const accent = params.get('accent');
 const brand = params.get('brand');
 const socialsParam = params.get('socials');
 
 // sections param: comma list. Absent -> show all.
 const sectionsParam = params.get('sections');
-const activeSections = sectionsParam
+let activeSections = sectionsParam
   ? new Set(sectionsParam.split(',').map((s) => s.trim()).filter(Boolean))
   : new Set(ALL_SECTIONS);
 
@@ -25,26 +25,11 @@ document.body.classList.add(`layout-${layout}`);
 if (accent && /^#[0-9a-fA-F]{6}$/.test(accent)) {
   document.documentElement.style.setProperty('--accent', accent);
 }
-if (brand) {
-  const handle = document.querySelector('.handle');
-  const decoded = brand.slice(0, 32);
-  const split = decoded.includes('_') ? decoded.split('_') : [decoded, ''];
-  handle.innerHTML = '';
-  handle.appendChild(document.createTextNode(split[0]));
-  if (split[1]) {
-    const accentSpan = document.createElement('span');
-    accentSpan.className = 'handle-accent';
-    accentSpan.textContent = `_${split.slice(1).join('_')}`;
-    handle.appendChild(accentSpan);
-  }
-}
+if (brand) applyBrand(brand);
 if (socialsParam) {
-  const activeSocials = socialsParam === 'none'
-    ? new Set()
-    : new Set(socialsParam.split(',').map((s) => s.trim()).filter(Boolean));
-  document.querySelectorAll('[data-social]').forEach((node) => {
-    node.classList.toggle('hidden', !activeSocials.has(node.getAttribute('data-social')));
-  });
+  applySocials(socialsParam === 'none'
+    ? []
+    : socialsParam.split(',').map((s) => s.trim()).filter(Boolean));
 }
 
 // Hide sections that are not requested.
@@ -115,6 +100,67 @@ function formatDuration(totalSeconds) {
     return `${h}h ${String(m).padStart(2, '0')}m`;
   }
   return `${m}m ${String(s % 60).padStart(2, '0')}s`;
+}
+
+function applyLayout(nextLayout) {
+  document.body.classList.remove('layout-bar', 'layout-card');
+  layout = nextLayout === 'card' ? 'card' : 'bar';
+  document.body.classList.add(`layout-${layout}`);
+}
+
+function applyBrand(value) {
+  if (!value) return;
+  const handle = document.querySelector('.handle');
+  const decoded = String(value).slice(0, 32);
+  const split = decoded.includes('_') ? decoded.split('_') : [decoded, ''];
+  handle.innerHTML = '';
+  handle.appendChild(document.createTextNode(split[0]));
+  if (split[1]) {
+    const accentSpan = document.createElement('span');
+    accentSpan.className = 'handle-accent';
+    accentSpan.textContent = `_${split.slice(1).join('_')}`;
+    handle.appendChild(accentSpan);
+  }
+}
+
+function applySocials(keys) {
+  const activeSocials = new Set(keys || []);
+  document.querySelectorAll('[data-social]').forEach((node) => {
+    node.classList.toggle('hidden', !activeSocials.has(node.getAttribute('data-social')));
+  });
+}
+
+async function loadAssignedAppearance() {
+  try {
+    const res = await fetch('/api/config', { cache: 'no-store' });
+    if (!res.ok) return;
+    const config = await res.json();
+    const printer = (config.printers || []).find((item) => item.id === printerId) || config.printers?.[0];
+    const preset = (config.presets || []).find((item) => item.id === printer?.presetId);
+
+    if (!params.has('layout') && preset?.layout) applyLayout(preset.layout);
+    if (!sectionsParam && preset?.sections?.length) {
+      activeSections = new Set(preset.sections);
+    }
+    if (!(accent && /^#[0-9a-fA-F]{6}$/.test(accent))) {
+      const configuredAccent = preset?.accentColor || config.theme?.accentColor;
+      if (/^#[0-9a-fA-F]{6}$/.test(configuredAccent || '')) {
+        document.documentElement.style.setProperty('--accent', configuredAccent);
+      }
+    }
+    if (!brand) applyBrand(preset?.brandText || config.theme?.brandText);
+    if (!socialsParam) {
+      const configuredSocials = preset
+        ? preset.socials || []
+        : Object.entries(config.theme?.socials || {}).filter(([, value]) => value).map(([key]) => key);
+      applySocials(configuredSocials);
+    }
+    applySections();
+  } catch {
+    // URL/default appearance remains a safe fallback when config is unavailable.
+  } finally {
+    document.documentElement.classList.remove('appearance-loading');
+  }
 }
 
 function applyToolchangeAvailability(hasToolchanges) {
@@ -283,8 +329,13 @@ async function poll() {
   }
 }
 
-applySections();
-applyToolchangeAvailability(false);
-loadPrinterName();
-poll();
-setInterval(poll, POLL_MS);
+async function bootstrap() {
+  applySections();
+  applyToolchangeAvailability(false);
+  await loadAssignedAppearance();
+  loadPrinterName();
+  poll();
+  setInterval(poll, POLL_MS);
+}
+
+bootstrap();
