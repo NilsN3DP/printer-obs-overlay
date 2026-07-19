@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import fs from 'node:fs';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import multer from 'multer';
 import { downloadFile, parseFile, computeLive } from './gcode-meta.js';
@@ -300,9 +301,76 @@ function printerAuthHeaders(printer, headers = {}) {
   return next;
 }
 
+function md5(value) {
+  return crypto.createHash('md5').update(value).digest('hex');
+}
+
+function parseDigestChallenge(header) {
+  if (!header || !/^Digest\s/i.test(header)) return null;
+  const fields = {};
+  const body = header.replace(/^Digest\s+/i, '');
+  const re = /(\w+)=("([^"]*)"|([^,]*))(?:,\s*|$)/g;
+  let match;
+  while ((match = re.exec(body))) {
+    fields[match[1]] = match[3] ?? match[4] ?? '';
+  }
+  return fields.realm && fields.nonce ? fields : null;
+}
+
+function digestAuthHeader(printer, challenge, method, uri) {
+  const qop = String(challenge.qop || '').split(',').map((v) => v.trim()).includes('auth') ? 'auth' : '';
+  const nc = '00000001';
+  const cnonce = crypto.randomBytes(8).toString('hex');
+  const algorithm = String(challenge.algorithm || 'MD5').toUpperCase();
+  const ha1Base = md5(`${printer.username}:${challenge.realm}:${printer.password}`);
+  const ha1 = algorithm === 'MD5-SESS' ? md5(`${ha1Base}:${challenge.nonce}:${cnonce}`) : ha1Base;
+  const ha2 = md5(`${method}:${uri}`);
+  const response = qop
+    ? md5(`${ha1}:${challenge.nonce}:${nc}:${cnonce}:${qop}:${ha2}`)
+    : md5(`${ha1}:${challenge.nonce}:${ha2}`);
+  const parts = [
+    `username="${printer.username}"`,
+    `realm="${challenge.realm}"`,
+    `nonce="${challenge.nonce}"`,
+    `uri="${uri}"`,
+    `response="${response}"`,
+    `algorithm=${algorithm}`,
+  ];
+  if (challenge.opaque) parts.push(`opaque="${challenge.opaque}"`);
+  if (qop) parts.push(`qop=${qop}`, `nc=${nc}`, `cnonce="${cnonce}"`);
+  return `Digest ${parts.join(', ')}`;
+}
+
+async function fetchWithPrinterAuth(printer, pathnameOrUrl, options = {}) {
+  const isAbsolute = /^https?:\/\//i.test(pathnameOrUrl);
+  const url = isAbsolute ? pathnameOrUrl : `http://${printer.host}${pathnameOrUrl}`;
+  const parsed = new URL(url);
+  const uri = `${parsed.pathname}${parsed.search}`;
+  const method = String(options.method || 'GET').toUpperCase();
+  const headers = printerAuthHeaders(printer, options.headers || {});
+  const first = await fetch(url, { ...options, method, headers });
+  if (
+    first.status !== 401
+    || printer.apiKey
+    || !printer.username
+    || !printer.password
+    || !first.headers.get('www-authenticate')?.includes('Digest')
+  ) {
+    return first;
+  }
+  first.body?.cancel?.().catch?.(() => {});
+  const challenge = parseDigestChallenge(first.headers.get('www-authenticate'));
+  if (!challenge) return first;
+  const digestHeaders = {
+    ...(options.headers || {}),
+    Authorization: digestAuthHeader(printer, challenge, method, uri),
+  };
+  return fetch(url, { ...options, method, headers: digestHeaders });
+}
+
 async function fetchJson(printer, pathname, headers = {}) {
-  const res = await fetch(`http://${printer.host}${pathname}`, {
-    headers: printerAuthHeaders(printer, headers),
+  const res = await fetchWithPrinterAuth(printer, pathname, {
+    headers,
     signal: AbortSignal.timeout(4000),
   });
   if (!res.ok) {
@@ -549,7 +617,7 @@ async function ensureJobMeta(printer) {
   jobMeta.set(printer.id, { key, fetching: true });
   try {
     console.log(`[${printer.id}] Lade G-Code fuer Overlay-Meta: ${file.display_name || file.name}`);
-    const buf = await downloadFile(printer.host, printerAuthHeaders(printer), download);
+    const buf = await downloadFile(printer.host, (url, options) => fetchWithPrinterAuth(printer, url, options), download);
     const meta = parseFile(buf);
     jobMeta.set(printer.id, { key, meta });
     writeMetaCache(key, meta);

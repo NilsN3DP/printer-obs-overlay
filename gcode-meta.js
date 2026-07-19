@@ -33,7 +33,9 @@ export async function downloadFile(host, authHeaders = {}, downloadPath) {
   const overall = setTimeout(() => controller.abort(new Error('Download: 2 h Gesamtlimit')), 120 * 60 * 1000);
 
   try {
-    const res = await fetch(url, { headers, signal: controller.signal });
+    const res = await (typeof authHeaders === 'function'
+      ? authHeaders(url, { signal: controller.signal })
+      : fetch(url, { headers, signal: controller.signal }));
     if (!res.ok) {
       throw new Error(`Download ${downloadPath} -> HTTP ${res.status}`);
     }

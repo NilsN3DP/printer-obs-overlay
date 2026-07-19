@@ -21,7 +21,7 @@ Features:
 
 ## 1. Druckerzugriff vorbereiten
 
-- PrusaLink: Benutzername und Passwort aus PrusaLink eintragen. Ein API-Key kann alternativ weiter genutzt werden.
+- PrusaLink: Benutzername und Passwort aus PrusaLink eintragen. Digest-Login wird unterstützt; ein API-Key kann alternativ weiter genutzt werden.
 - OctoPrint: API-Key unter **Settings > Application Keys**.
 - Moonraker/Klipper: Host ist meist `<ip>:7125`; API-Key kann leer bleiben, wenn Moonraker lokal offen ist.
 
@@ -113,7 +113,7 @@ Das Branding-Handle kann im Dashboard gesetzt werden; es wird als URL-Parameter 
 
 ### PrusaLink
 
-Liefert die meisten Felder und kann G-Code-Metadaten cachen, wenn die laufende Datei per PrusaLink downloadbar ist. Für PrusaLink reicht Benutzername/Passwort; ein API-Key ist nur noch eine Alternative. Erweiterte Felder wie Filamentfarbe, Werkzeug, Layer und Waste kommen entweder aus Custom-Firmware oder aus G-Code-Metadaten.
+Liefert die meisten Felder und kann G-Code-Metadaten cachen, wenn die laufende Datei per PrusaLink downloadbar ist. Für PrusaLink reicht Benutzername/Passwort inklusive Digest-Auth; ein API-Key ist nur noch eine Alternative. Erweiterte Felder wie Filamentfarbe, Werkzeug, Layer und Waste kommen entweder aus Custom-Firmware oder aus G-Code-Metadaten.
 Der Standardweg fuer INDX/Toolchange-Prüfung ist der Upload im Dashboard: `.gcode` oder `.bgcode` hochladen und vor dem Stream prüfen, ob Toolchanges, Layer und Waste plausibel erkannt werden.
 
 ### OctoPrint
