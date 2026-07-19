@@ -9,6 +9,7 @@ const printerId = params.get('printer') || '';
 const layout = params.get('layout') === 'card' ? 'card' : 'bar';
 const accent = params.get('accent');
 const brand = params.get('brand');
+const socialsParam = params.get('socials');
 
 // sections param: comma list. Absent -> show all.
 const sectionsParam = params.get('sections');
@@ -35,6 +36,14 @@ if (brand) {
     accentSpan.textContent = `_${split.slice(1).join('_')}`;
     handle.appendChild(accentSpan);
   }
+}
+if (socialsParam) {
+  const activeSocials = socialsParam === 'none'
+    ? new Set()
+    : new Set(socialsParam.split(',').map((s) => s.trim()).filter(Boolean));
+  document.querySelectorAll('[data-social]').forEach((node) => {
+    node.classList.toggle('hidden', !activeSocials.has(node.getAttribute('data-social')));
+  });
 }
 
 // Hide sections that are not requested.

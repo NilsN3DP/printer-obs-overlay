@@ -20,6 +20,7 @@
       "id": "coreone",
       "name": "Core One INDX",
       "type": "prusalink",
+      "model": "coreone-indx",
       "host": "192.168.1.122",
       "apiKey": "DEIN_API_KEY_HIER",
       "cameraUrl": "http://192.168.1.122/camera/snapshot",
@@ -29,6 +30,7 @@
       "id": "mk4",
       "name": "MK4S Werkstatt",
       "type": "prusalink",
+      "model": "mk4s",
       "host": "192.168.1.130",
       "apiKey": "ZWEITER_API_KEY"
     },
@@ -36,6 +38,7 @@
       "id": "octo",
       "name": "OctoPrint Drucker",
       "type": "octoprint",
+      "model": "custom",
       "host": "192.168.1.140",
       "apiKey": "OCTOPRINT_API_KEY",
       "cameraUrl": "http://192.168.1.140/webcam/?action=stream"
@@ -44,6 +47,7 @@
       "id": "klipper",
       "name": "Klipper Drucker",
       "type": "moonraker",
+      "model": "custom",
       "host": "192.168.1.150:7125",
       "apiKey": "",
       "cameraUrl": "http://192.168.1.150/webcam/?action=stream"

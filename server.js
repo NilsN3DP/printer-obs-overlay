@@ -17,6 +17,38 @@ const PACKAGE_VERSION = (() => {
   }
 })();
 
+const PRINTER_MODELS = [
+  { id: 'custom', name: 'Anderer Drucker', board: 'other', toolchanger: false, indx: false, xl: false },
+  { id: 'mini', name: 'Prusa MINI / MINI+', board: 'xBuddy', toolchanger: false, indx: false, xl: false },
+  { id: 'mk35', name: 'Prusa MK3.5', board: 'xBuddy', toolchanger: false, indx: false, xl: false },
+  { id: 'mk4', name: 'Prusa MK4', board: 'xBuddy', toolchanger: false, indx: false, xl: false },
+  { id: 'mk4s', name: 'Prusa MK4S', board: 'xBuddy', toolchanger: false, indx: false, xl: false },
+  { id: 'coreone', name: 'Prusa Core One', board: 'xBuddy', toolchanger: false, indx: false, xl: false },
+  { id: 'coreone-indx', name: 'Prusa Core One INDX', board: 'xBuddy', toolchanger: true, indx: true, xl: false },
+  { id: 'xl-1t', name: 'Prusa XL 1 Tool', board: 'xBuddy', toolchanger: false, indx: false, xl: true },
+  { id: 'xl-2t', name: 'Prusa XL 2 Tool', board: 'xBuddy', toolchanger: true, indx: false, xl: true },
+  { id: 'xl-5t', name: 'Prusa XL 5 Tool', board: 'xBuddy', toolchanger: true, indx: false, xl: true },
+];
+
+function modelCapabilities(modelId) {
+  return PRINTER_MODELS.find((m) => m.id === modelId) || PRINTER_MODELS[0];
+}
+
+function inferModel(p) {
+  if (p.model || p.printerModel) return String(p.model || p.printerModel);
+  const text = `${p.id || ''} ${p.name || ''}`.toLowerCase();
+  if (text.includes('xl') && text.includes('5')) return 'xl-5t';
+  if (text.includes('xl') && text.includes('2')) return 'xl-2t';
+  if (text.includes('xl')) return 'xl-1t';
+  if (text.includes('indx')) return 'coreone-indx';
+  if (text.includes('core') && text.includes('one')) return 'coreone';
+  if (text.includes('mk4s')) return 'mk4s';
+  if (text.includes('mk4')) return 'mk4';
+  if (text.includes('mk3.5') || text.includes('mk35')) return 'mk35';
+  if (text.includes('mini')) return 'mini';
+  return 'custom';
+}
+
 const CONFIG_CANDIDATES = [
   ...(process.env.CONFIG_PATH ? [process.env.CONFIG_PATH] : []),
   path.join(__dirname, 'config.json'),
@@ -83,6 +115,7 @@ function normalizeConfig(cfg) {
         id,
         name: String(p.name || id),
         type: String(p.type || p.provider || cfg.type || 'prusalink').toLowerCase(),
+        model: inferModel(p),
         host: String(p.host || '').replace(/^https?:\/\//, '').replace(/\/+$/, ''),
         apiKey: String(p.apiKey || p.api_key || ''),
         cameraUrl: String(p.cameraUrl || ''),
@@ -115,6 +148,7 @@ function normalizeConfig(cfg) {
       host: '',
       apiKey: '',
       cameraUrl: '',
+      model: 'coreone-indx',
       wasteGramsPerChange: 0.022,
     });
   }
@@ -128,10 +162,18 @@ function normalizeConfig(cfg) {
 }
 
 function normalizeTheme(theme = {}) {
+  const socials = theme.socials && typeof theme.socials === 'object' ? theme.socials : {};
   return {
     accentColor: String(theme.accentColor || '#fa6831'),
     brandText: String(theme.brandText || 'N3DP_de'),
     logoUrl: String(theme.logoUrl || ''),
+    socials: {
+      youtube: String(socials.youtube || ''),
+      instagram: String(socials.instagram || ''),
+      tiktok: String(socials.tiktok || ''),
+      twitch: String(socials.twitch || ''),
+      website: String(socials.website || ''),
+    },
   };
 }
 
@@ -142,6 +184,9 @@ function normalizePresets(presets = []) {
       name: String(p.name || `Preset ${i + 1}`),
       layout: p.layout === 'card' ? 'card' : 'bar',
       sections: Array.isArray(p.sections) ? p.sections.map(String) : [],
+      accentColor: String(p.accentColor || ''),
+      brandText: String(p.brandText || ''),
+      socials: Array.isArray(p.socials) ? p.socials.map(String) : [],
     })).filter((p) => p.id && p.sections.length > 0)
     : [];
 }
@@ -154,10 +199,13 @@ function publicConfig() {
     demoMode: config.demoMode,
     theme: config.theme,
     presets: config.presets,
+    printerModels: PRINTER_MODELS,
     printers: config.printers.map((p) => ({
       id: p.id,
       name: p.name,
       type: p.type,
+      model: p.model || 'custom',
+      capabilities: modelCapabilities(p.model),
       host: p.host,
       apiKeySet: Boolean(p.apiKey),
       cameraUrl: p.cameraUrl || '',
@@ -183,6 +231,7 @@ function persistConfig(nextPublic) {
           id,
           name: String(p.name || id),
           type: String(p.type || 'prusalink').toLowerCase(),
+          model: String(p.model || 'custom'),
           host: String(p.host || '').replace(/^https?:\/\//, '').replace(/\/+$/, ''),
           apiKey,
           cameraUrl: String(p.cameraUrl || ''),
@@ -566,6 +615,8 @@ app.get('/api/health', (req, res) => {
       id: p.id,
       name: p.name,
       type: p.type,
+      model: p.model || 'custom',
+      capabilities: modelCapabilities(p.model),
       host: p.host,
       cameraUrl: p.cameraUrl || '',
       connected: Boolean(state?.connected),
@@ -583,6 +634,65 @@ app.get('/api/health', (req, res) => {
     demoMode: config.demoMode,
     printers,
   });
+});
+
+function subnetFromRequest(req) {
+  const remote = req.socket?.remoteAddress || '';
+  const match = remote.match(/(\d+\.\d+\.\d+)\.\d+$/);
+  return match ? `${match[1]}.0/24` : '192.168.1.0/24';
+}
+
+function hostsFromCidr(cidr) {
+  const match = String(cidr || '').match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.0\/24$/);
+  if (!match) return [];
+  const prefix = `${match[1]}.${match[2]}.${match[3]}`;
+  return Array.from({ length: 254 }, (_, i) => `${prefix}.${i + 1}`);
+}
+
+async function probeHost(host) {
+  const probes = [
+    { type: 'moonraker', port: 7125, path: '/server/info' },
+    { type: 'prusalink', port: 80, path: '/api/v1/status' },
+    { type: 'octoprint', port: 80, path: '/api/version' },
+    { type: 'octoprint', port: 5000, path: '/api/version' },
+  ];
+  for (const probe of probes) {
+    try {
+      const res = await fetch(`http://${host}:${probe.port}${probe.path}`, {
+        signal: AbortSignal.timeout(700),
+      });
+      if ([200, 401, 403].includes(res.status)) {
+        return {
+          host: probe.port === 80 ? host : `${host}:${probe.port}`,
+          type: probe.type,
+          status: res.status,
+        };
+      }
+    } catch {
+      // try next probe
+    }
+  }
+  return null;
+}
+
+app.get('/api/discover', async (req, res) => {
+  const cidr = req.query.cidr || subnetFromRequest(req);
+  const hosts = hostsFromCidr(cidr);
+  if (!hosts.length) {
+    res.status(400).json({ ok: false, error: 'Nur /24-Netze wie 192.168.1.0/24 werden unterstützt.' });
+    return;
+  }
+  const found = [];
+  let index = 0;
+  const workers = Array.from({ length: 32 }, async () => {
+    while (index < hosts.length) {
+      const host = hosts[index++];
+      const result = await probeHost(host);
+      if (result) found.push(result);
+    }
+  });
+  await Promise.all(workers);
+  res.json({ ok: true, cidr, found: found.sort((a, b) => a.host.localeCompare(b.host, undefined, { numeric: true })) });
 });
 
 app.get('/api/config', (req, res) => {
@@ -649,6 +759,8 @@ app.get('/api/printers', (req, res) => {
     id: p.id,
     name: p.name,
     type: p.type,
+    model: p.model || 'custom',
+    capabilities: modelCapabilities(p.model),
     cameraUrl: p.cameraUrl || '',
   })));
 });

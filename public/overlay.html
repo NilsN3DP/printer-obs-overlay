@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Prusa OBS Overlay</title>
+  <title>Printer OBS Overlay</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -17,16 +17,19 @@
   <footer class="footer">
     <div class="brand" data-section="brand">
       <span class="handle">N3DP<span class="handle-accent">_de</span></span>
-      <div class="socials">
-        <svg class="social-icon" viewBox="0 0 24 24" aria-label="YouTube">
+      <div class="socials" id="socials">
+        <svg class="social-icon" data-social="youtube" viewBox="0 0 24 24" aria-label="YouTube">
           <path d="M23.5 6.2a3 3 0 0 0-2.12-2.12C19.5 3.55 12 3.55 12 3.55s-7.5 0-9.38.53A3 3 0 0 0 .5 6.2 31.3 31.3 0 0 0 0 12a31.3 31.3 0 0 0 .5 5.8 3 3 0 0 0 2.12 2.12c1.88.53 9.38.53 9.38.53s7.5 0 9.38-.53a3 3 0 0 0 2.12-2.12A31.3 31.3 0 0 0 24 12a31.3 31.3 0 0 0-.5-5.8z" fill="currentColor"/>
           <path d="M9.6 15.3V8.7L15.8 12l-6.2 3.3z" fill="#161616"/>
         </svg>
-        <svg class="social-icon" viewBox="0 0 24 24" aria-label="Instagram">
+        <svg class="social-icon" data-social="instagram" viewBox="0 0 24 24" aria-label="Instagram">
           <rect x="2" y="2" width="20" height="20" rx="5.5" fill="none" stroke="currentColor" stroke-width="2"/>
           <circle cx="12" cy="12" r="4.6" fill="none" stroke="currentColor" stroke-width="2"/>
           <circle cx="17.6" cy="6.4" r="1.4" fill="currentColor"/>
         </svg>
+        <span class="social-text hidden" data-social="tiktok">TikTok</span>
+        <span class="social-text hidden" data-social="twitch">Twitch</span>
+        <span class="social-text hidden" data-social="website">Web</span>
       </div>
     </div>
 

@@ -8,8 +8,11 @@ Features:
 - **Mehrere Drucker** über eine `config.json`
 - **Dashboard** (`http://<server>:4200/`): Online-Status, Fortschritt, Jobdatei, Kamera-Link und OBS-Link je Drucker
 - **Web-Setup**: Drucker hinzufügen/bearbeiten/löschen, Config speichern und Verbindung testen
-- **Layout-Presets**: Bereiche, Layout, Akzentfarbe und Branding als OBS-Link speichern
-- **INDX/G-Code-Analyse**: `.gcode` und `.bgcode` hochladen, Toolchanges, Layer, Waste und erste Tool-Events prüfen
+- **Layout-Presets**: Bereiche, Layout, Akzentfarbe, Branding und Social-Auswahl als OBS-Link speichern
+- **Branding**: Name und sichtbare Social-Media-Seiten im Dashboard wählen
+- **Druckermodelle**: xBuddy-Drucker, Core One INDX und XL-Familie auswählen; Toolchanger-Felder erscheinen nur dort
+- **Netzwerksuche**: `/24`-Netz nach PrusaLink, OctoPrint und Moonraker-Kandidaten scannen
+- **INDX/XL-G-Code-Analyse**: `.gcode` und `.bgcode` hochladen, Toolchanges, Layer, Waste und erste Tool-Events prüfen
 - **Adapter**: `prusalink`, `octoprint`, `moonraker`
 - **Demo-Modus** ohne echten Drucker
 - Zwei Layouts: **Leiste** (vollflächige Fußzeile + Rahmen) oder **Karte** (frei platzierbar)
@@ -97,6 +100,7 @@ Hintergrund ist transparent; nur die gewählten Bereiche werden gezeichnet.
 | `layout`   | `&layout=card`                    | `bar` (Standard) oder `card` |
 | `accent`   | `&accent=%23ffaa00`               | Akzentfarbe als URL-codiertes Hex |
 | `brand`    | `&brand=N3DP_de`                  | Branding-Text |
+| `socials`  | `&socials=youtube,instagram`      | Sichtbare Socials; `none` blendet alle aus |
 | `poll`     | `&poll=2000`                      | Abfrageintervall im Browser (ms) |
 
 Verfügbare Bereiche: `frame`, `brand`, `printerName`, `status`, `file`, `progress`, `time`,

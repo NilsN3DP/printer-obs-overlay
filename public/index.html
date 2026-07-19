@@ -12,124 +12,142 @@
 <body>
   <header class="top">
     <h1>Printer OBS Overlay <span class="accent">Dashboard</span></h1>
-    <p class="sub">Drucker verwalten, OBS-Links bauen, INDX-Toolchanges aus Dateien auswerten.</p>
+    <p class="sub">Drucker, Branding, Presets und Toolchange-Analyse zentral verwalten.</p>
   </header>
 
-  <main class="page">
-    <section class="dashboard">
-      <div class="panel status-panel">
-        <div class="panel-head">
-          <div>
-            <span class="field-label">System</span>
-            <h2>Live-Drucker</h2>
-          </div>
-          <button type="button" id="refreshBtn" class="mini">Aktualisieren</button>
+  <main class="page dashboard-layout">
+    <section class="panel span-all">
+      <div class="panel-head">
+        <div>
+          <span class="field-label">System</span>
+          <h2>Live-Drucker</h2>
         </div>
-        <div id="healthSummary" class="summary">Lade Status...</div>
-        <div id="printerCards" class="printer-cards"></div>
+        <button type="button" id="refreshBtn" class="mini">Aktualisieren</button>
+      </div>
+      <div id="healthSummary" class="summary">Lade Status...</div>
+      <div id="printerCards" class="printer-cards"></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <span class="field-label">Setup</span>
+          <h2>Drucker</h2>
+        </div>
+        <button type="button" id="addPrinterBtn" class="mini">Hinzufügen</button>
+      </div>
+      <label class="toggle-row">
+        <input type="checkbox" id="demoMode" />
+        <span>Demo-Drucker anzeigen</span>
+      </label>
+      <div class="discovery">
+        <div class="preset-row">
+          <input type="text" id="discoverCidr" placeholder="192.168.1.0/24" />
+          <button type="button" id="discoverBtn" class="mini">Im Netz suchen</button>
+        </div>
+        <div id="discoverResult" class="discover-result"></div>
+      </div>
+      <div id="printerEditor" class="editor-list"></div>
+      <div class="form-actions">
+        <button type="button" id="saveConfigBtn" class="copy">Config speichern</button>
+        <span id="saveStatus" class="save-status"></span>
       </div>
     </section>
 
-    <section class="dashboard-grid">
-      <section class="panel">
-        <div class="panel-head">
-          <div>
-            <span class="field-label">Setup</span>
-            <h2>Drucker</h2>
-          </div>
-          <button type="button" id="addPrinterBtn" class="mini">Hinzufügen</button>
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <span class="field-label">Branding</span>
+          <h2>Auftritt</h2>
         </div>
-        <label class="toggle-row">
-          <input type="checkbox" id="demoMode" />
-          <span>Demo-Drucker anzeigen</span>
-        </label>
-        <div id="printerEditor" class="editor-list"></div>
-        <div class="form-actions">
-          <button type="button" id="saveConfigBtn" class="copy">Config speichern</button>
-          <span id="saveStatus" class="save-status"></span>
-        </div>
-      </section>
-
-      <section class="panel">
-        <div class="panel-head">
-          <div>
-            <span class="field-label">INDX / G-Code</span>
-            <h2>Datei-Analyse</h2>
-          </div>
-        </div>
-        <form id="uploadForm" class="upload-box">
-          <input type="file" id="gcodeFile" name="file" accept=".gcode,.bgcode,.gco,.gc" />
-          <button type="submit" class="copy">Analysieren</button>
-        </form>
-        <p class="hint">Standardweg: Datei hochladen. CFW-Felder werden im Overlay weiterhin bevorzugt, wenn sie vorhanden sind.</p>
-        <div id="uploadResult" class="analysis-result">Noch keine Datei analysiert.</div>
-      </section>
+      </div>
+      <div class="form-grid single">
+        <label><span class="field-label">Branding-Name</span><input type="text" id="brandText" maxlength="32" value="N3DP_de" /></label>
+        <label><span class="field-label">Akzentfarbe</span><input type="color" id="accentColor" value="#fa6831" /></label>
+      </div>
+      <div class="social-grid">
+        <label><input type="checkbox" data-social-toggle="youtube" /> YouTube</label>
+        <label><input type="checkbox" data-social-toggle="instagram" /> Instagram</label>
+        <label><input type="checkbox" data-social-toggle="tiktok" /> TikTok</label>
+        <label><input type="checkbox" data-social-toggle="twitch" /> Twitch</label>
+        <label><input type="checkbox" data-social-toggle="website" /> Website</label>
+      </div>
+      <p class="hint">Die Social-Auswahl steuert, welche Symbole oder Labels im Overlay sichtbar sind.</p>
     </section>
 
-    <section class="grid">
-      <section class="panel">
-        <label class="field">
-          <span class="field-label">Drucker</span>
-          <select id="printerSelect"></select>
-        </label>
-
-        <div class="field">
-          <span class="field-label">Layout</span>
-          <div class="segmented" id="layoutGroup">
-            <label><input type="radio" name="layout" value="bar" checked /> Leiste unten</label>
-            <label><input type="radio" name="layout" value="card" /> Karte frei platzierbar</label>
-          </div>
-        </div>
-
-        <div class="field two-cols">
-          <label>
-            <span class="field-label">Akzentfarbe</span>
-            <input type="color" id="accentColor" value="#fa6831" />
-          </label>
-          <label>
-            <span class="field-label">Branding</span>
-            <input type="text" id="brandText" maxlength="32" value="N3DP_de" />
-          </label>
-        </div>
-
-        <div class="field">
-          <div class="field-label-row">
-            <span class="field-label">Bereiche</span>
-            <div class="mini-actions">
-              <button type="button" id="selectAll" class="mini">Alle</button>
-              <button type="button" id="selectNone" class="mini">Keine</button>
+    <section class="panel span-all">
+      <div class="overlay-workbench">
+        <div>
+          <div class="panel-head compact">
+            <div>
+              <span class="field-label">Overlay</span>
+              <h2>OBS-Link bauen</h2>
             </div>
           </div>
-          <div id="sectionList" class="sections"></div>
-        </div>
-
-        <div class="field">
-          <div class="field-label-row">
-            <span class="field-label">Presets</span>
-            <button type="button" id="savePresetBtn" class="mini">Preset speichern</button>
+          <label class="field">
+            <span class="field-label">Drucker</span>
+            <select id="printerSelect"></select>
+          </label>
+          <div class="field">
+            <span class="field-label">Layout</span>
+            <div class="segmented compact-segmented" id="layoutGroup">
+              <label><input type="radio" name="layout" value="bar" checked /> Leiste unten</label>
+              <label><input type="radio" name="layout" value="card" /> Karte frei platzierbar</label>
+            </div>
           </div>
-          <div class="preset-row">
+          <div class="field">
+            <div class="field-label-row">
+              <span class="field-label">Bereiche</span>
+              <div class="mini-actions">
+                <button type="button" id="selectAll" class="mini">Alle</button>
+                <button type="button" id="selectNone" class="mini">Keine</button>
+              </div>
+            </div>
+            <div id="sectionList" class="sections"></div>
+          </div>
+
+          <div class="field preset-block">
+            <span class="field-label">Preset</span>
             <select id="presetSelect"></select>
-            <input type="text" id="presetName" placeholder="Preset-Name" />
+            <div class="preset-actions">
+              <input type="text" id="presetName" placeholder="Preset-Name" />
+              <button type="button" id="savePresetBtn" class="mini">Preset speichern</button>
+              <button type="button" id="deletePresetBtn" class="mini danger">Löschen</button>
+            </div>
+          </div>
+
+          <span class="field-label">Overlay-URL für OBS</span>
+          <div class="url-row">
+            <input type="text" id="urlOut" readonly />
+            <button type="button" id="copyBtn" class="copy">Kopieren</button>
           </div>
         </div>
-      </section>
 
-      <section class="panel">
-        <span class="field-label">Overlay-URL für OBS</span>
-        <div class="url-row">
-          <input type="text" id="urlOut" readonly />
-          <button type="button" id="copyBtn" class="copy">Kopieren</button>
-        </div>
-        <p class="hint">Breite/Höhe der Browser-Quelle = Canvas-Auflösung. Bei Karte reicht auch ein kleinerer Bereich.</p>
-
-        <span class="field-label preview-label">Live-Vorschau</span>
-        <div class="preview-wrap">
-          <div class="preview-canvas">
-            <iframe id="previewFrame" title="Overlay-Vorschau"></iframe>
+        <div>
+          <span class="field-label">Live-Vorschau</span>
+          <div class="preview-wrap">
+            <div class="preview-canvas">
+              <iframe id="previewFrame" title="Overlay-Vorschau"></iframe>
+            </div>
           </div>
         </div>
-      </section>
+      </div>
+    </section>
+
+    <section class="panel span-all" id="toolchangePanel">
+      <div class="panel-head compact">
+        <div>
+          <span class="field-label">Toolchanger</span>
+          <h2 id="toolchangeTitle">INDX / XL Datei-Analyse</h2>
+        </div>
+      </div>
+      <form id="uploadForm" class="upload-box">
+        <select id="analysisPrinterSelect"></select>
+        <input type="file" id="gcodeFile" name="file" accept=".gcode,.bgcode,.gco,.gc" />
+        <button type="submit" class="copy">Analysieren</button>
+      </form>
+      <p class="hint">Wird nur für Drucker mit INDX oder XL-Toolchanger angezeigt. Standardweg: Datei hochladen; CFW-Livefelder werden weiterhin bevorzugt.</p>
+      <div id="uploadResult" class="analysis-result">Noch keine Datei analysiert.</div>
     </section>
   </main>
 
@@ -150,11 +168,13 @@
           <option value="octoprint">OctoPrint</option>
           <option value="moonraker">Moonraker</option>
         </select></label>
+        <label><span class="field-label">Druckermodell</span><select data-field="model"></select></label>
         <label><span class="field-label">Host/IP</span><input data-field="host" placeholder="192.168.1.122" /></label>
         <label><span class="field-label">API-Key</span><input data-field="apiKey" type="password" placeholder="Leer lassen = behalten" /></label>
         <label><span class="field-label">Kamera-URL</span><input data-field="cameraUrl" placeholder="http://.../snapshot.jpg" /></label>
-        <label><span class="field-label">Waste g/Wechsel</span><input data-field="wasteGramsPerChange" type="number" step="0.001" /></label>
+        <label data-indx-field><span class="field-label">Waste g/Wechsel</span><input data-field="wasteGramsPerChange" type="number" step="0.001" /></label>
       </div>
+      <div class="capability-note" data-capabilities></div>
       <div class="test-result" data-result></div>
     </article>
   </template>
