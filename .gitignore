@@ -1,0 +1,8 @@
+node_modules/
+npm-debug.log*
+.env
+.env.local
+.claude/
+config/config.json
+config/meta-cache/
+nul

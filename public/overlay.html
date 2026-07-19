@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Prusa OBS Overlay</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="corner corner--tl" data-section="frame"></div>
+  <div class="corner corner--tr" data-section="frame"></div>
+  <div class="corner corner--bl" data-section="frame"></div>
+  <div class="corner corner--br" data-section="frame"></div>
+
+  <footer class="footer">
+    <div class="brand" data-section="brand">
+      <span class="handle">N3DP<span class="handle-accent">_de</span></span>
+      <div class="socials">
+        <svg class="social-icon" viewBox="0 0 24 24" aria-label="YouTube">
+          <path d="M23.5 6.2a3 3 0 0 0-2.12-2.12C19.5 3.55 12 3.55 12 3.55s-7.5 0-9.38.53A3 3 0 0 0 .5 6.2 31.3 31.3 0 0 0 0 12a31.3 31.3 0 0 0 .5 5.8 3 3 0 0 0 2.12 2.12c1.88.53 9.38.53 9.38.53s7.5 0 9.38-.53a3 3 0 0 0 2.12-2.12A31.3 31.3 0 0 0 24 12a31.3 31.3 0 0 0-.5-5.8z" fill="currentColor"/>
+          <path d="M9.6 15.3V8.7L15.8 12l-6.2 3.3z" fill="#161616"/>
+        </svg>
+        <svg class="social-icon" viewBox="0 0 24 24" aria-label="Instagram">
+          <rect x="2" y="2" width="20" height="20" rx="5.5" fill="none" stroke="currentColor" stroke-width="2"/>
+          <circle cx="12" cy="12" r="4.6" fill="none" stroke="currentColor" stroke-width="2"/>
+          <circle cx="17.6" cy="6.4" r="1.4" fill="currentColor"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="divider" data-divider></div>
+
+    <div class="printer-name" data-section="printerName">—</div>
+
+    <div id="offlineNotice" class="offline-notice hidden">
+      Printer unreachable
+    </div>
+
+    <div id="content" class="content hidden">
+      <div class="job-block" data-group="job">
+        <div class="job-top">
+          <span id="state" class="state state--offline" data-section="status">Connecting…</span>
+          <span class="filename" id="filename" data-section="file">—</span>
+        </div>
+        <div class="progress-row" data-section="progress">
+          <div class="progress-bar">
+            <div id="progressFill" class="progress-fill" style="width: 0%"></div>
+          </div>
+          <span id="progressPct" class="progress-pct">0%</span>
+        </div>
+        <div class="time-row" data-section="time">
+          <span id="timeRemaining" class="time-value">--:--</span>
+          <span class="time-sep">remaining</span>
+          <span id="timeElapsed" class="time-value">--:--</span>
+          <span class="time-sep">elapsed</span>
+        </div>
+      </div>
+
+      <div class="metrics">
+        <div class="metric metric--nozzle" data-section="nozzle">
+          <span class="metric-label">Nozzle</span>
+          <div class="metric-box">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M12 2c-1.1 3-3 4.8-3 8a3 3 0 0 0 6 0c0-1-.3-1.8-.8-2.6-.3.8-.9 1.4-1.7 1.4a1.5 1.5 0 0 1-1.5-1.5c0-1 .6-1.8 1-2.7C13 3.6 12.6 2.7 12 2z" fill="currentColor"/><rect x="9" y="14" width="6" height="7" rx="1" fill="currentColor"/></svg>
+            <span id="nozzleTemp" class="metric-value">–°C</span>
+            <span id="nozzleTarget" class="metric-sub">/ –°C</span>
+          </div>
+        </div>
+
+        <div class="metric metric--bed" data-section="bed">
+          <span class="metric-label">Bed</span>
+          <div class="metric-box">
+            <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="14" width="18" height="6" rx="1" fill="currentColor"/><path d="M7 11V7M12 11V7M17 11V7" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
+            <span id="bedTemp" class="metric-value">–°C</span>
+            <span id="bedTarget" class="metric-sub">/ –°C</span>
+          </div>
+        </div>
+
+        <div class="metric metric--filament" data-section="filament">
+          <span class="metric-label">Filament</span>
+          <div class="metric-box">
+            <span id="filamentColor" class="color-dot hidden"></span>
+            <span id="statMaterial" class="metric-value">–</span>
+          </div>
+        </div>
+
+        <div class="metric metric--changes" data-section="changes">
+          <span class="metric-label">Changes</span>
+          <div class="metric-box">
+            <span id="statChanges" class="metric-value">–</span>
+          </div>
+        </div>
+
+        <div class="metric metric--tool" data-section="tool">
+          <span class="metric-label">Tool</span>
+          <div class="metric-box">
+            <span id="statTool" class="metric-value">–</span>
+          </div>
+        </div>
+
+        <div class="metric metric--waste" data-section="waste">
+          <span class="metric-label">Waste</span>
+          <div class="metric-box">
+            <span id="statWaste" class="metric-value">–</span>
+            <span id="statWasteSub" class="metric-sub"></span>
+          </div>
+        </div>
+
+        <div class="metric metric--layer" data-section="layer">
+          <span class="metric-label">Layer</span>
+          <div class="metric-box">
+            <span id="statLayer" class="metric-value">–</span>
+          </div>
+        </div>
+
+        <div class="metric metric--speed" data-section="speed">
+          <span class="metric-label">Speed</span>
+          <div class="metric-box">
+            <span id="statSpeed" class="metric-value">–%</span>
+          </div>
+        </div>
+
+        <div class="metric metric--flow" data-section="flow">
+          <span class="metric-label">Flow</span>
+          <div class="metric-box">
+            <span id="statFlow" class="metric-value">–%</span>
+          </div>
+        </div>
+
+        <div class="metric metric--z" data-section="z">
+          <span class="metric-label">Z-Height</span>
+          <div class="metric-box">
+            <span id="statZ" class="metric-value">– mm</span>
+          </div>
+        </div>
+
+        <div class="metric metric--fan" data-section="fanHotend">
+          <span class="metric-label">Fan Hotend</span>
+          <div class="metric-box">
+            <span id="statFanHotend" class="metric-value">–</span>
+          </div>
+        </div>
+
+        <div class="metric metric--fan" data-section="fanPrint">
+          <span class="metric-label">Fan Print</span>
+          <div class="metric-box">
+            <span id="statFanPrint" class="metric-value">–</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="overlay.js"></script>
+</body>
+</html>

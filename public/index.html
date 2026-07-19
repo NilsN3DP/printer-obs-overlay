@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Printer OBS Overlay Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="builder.css" />
+</head>
+<body>
+  <header class="top">
+    <h1>Printer OBS Overlay <span class="accent">Dashboard</span></h1>
+    <p class="sub">Druckerstatus prüfen, OBS-Links bauen und mehrere Druckertypen zentral verwalten.</p>
+  </header>
+
+  <main class="page">
+    <section class="dashboard">
+      <div class="panel status-panel">
+        <div class="panel-head">
+          <div>
+            <span class="field-label">System</span>
+            <h2>Live-Drucker</h2>
+          </div>
+          <button type="button" id="refreshBtn" class="mini">Aktualisieren</button>
+        </div>
+        <div id="healthSummary" class="summary">Lade Status...</div>
+        <div id="printerCards" class="printer-cards"></div>
+      </div>
+    </section>
+
+    <section class="grid">
+    <section class="panel">
+      <label class="field">
+        <span class="field-label">Drucker</span>
+        <select id="printerSelect"></select>
+      </label>
+
+      <div class="field">
+        <span class="field-label">Layout</span>
+        <div class="segmented" id="layoutGroup">
+          <label><input type="radio" name="layout" value="bar" checked /> Leiste (unten)</label>
+          <label><input type="radio" name="layout" value="card" /> Karte (frei platzierbar)</label>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="field-label-row">
+          <span class="field-label">Bereiche</span>
+          <div class="mini-actions">
+            <button type="button" id="selectAll" class="mini">Alle</button>
+            <button type="button" id="selectNone" class="mini">Keine</button>
+          </div>
+        </div>
+        <div id="sectionList" class="sections"></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <span class="field-label">Overlay-URL für OBS</span>
+      <div class="url-row">
+        <input type="text" id="urlOut" readonly />
+        <button type="button" id="copyBtn" class="copy">Kopieren</button>
+      </div>
+      <p class="hint">Breite/Höhe der Browser-Quelle = deine Canvas-Auflösung (z. B. 1920 × 1080).
+        Bei „Karte“ reicht auch ein kleinerer Bereich.</p>
+
+      <span class="field-label preview-label">Live-Vorschau</span>
+      <div class="preview-wrap">
+        <div class="preview-canvas">
+          <iframe id="previewFrame" title="Overlay-Vorschau"></iframe>
+        </div>
+      </div>
+    </section>
+    </section>
+  </main>
+
+  <script src="builder.js"></script>
+</body>
+</html>

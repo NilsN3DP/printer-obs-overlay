@@ -1,0 +1,35 @@
+{
+  "pollIntervalMs": 2000,
+  "wasteGramsPerChange": 0,
+  "printers": [
+    {
+      "id": "coreone",
+      "name": "Core One INDX",
+      "type": "prusalink",
+      "host": "192.168.1.122",
+      "apiKey": "DEIN_API_KEY_HIER",
+      "wasteGramsPerChange": 0.022
+    },
+    {
+      "id": "mk4",
+      "name": "MK4S Werkstatt",
+      "type": "prusalink",
+      "host": "192.168.1.130",
+      "apiKey": "ZWEITER_API_KEY"
+    },
+    {
+      "id": "octo",
+      "name": "OctoPrint Drucker",
+      "type": "octoprint",
+      "host": "192.168.1.140",
+      "apiKey": "OCTOPRINT_API_KEY"
+    },
+    {
+      "id": "klipper",
+      "name": "Klipper Drucker",
+      "type": "moonraker",
+      "host": "192.168.1.150:7125",
+      "apiKey": ""
+    }
+  ]
+}

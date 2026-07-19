@@ -1,0 +1,17 @@
+services:
+  printer-obs-overlay:
+    build: .
+    # Or use a prebuilt image after `docker build -t printer-obs-overlay .`:
+    # image: ghcr.io/nilsn3dp/printer-obs-overlay:latest
+    container_name: printer-obs-overlay
+    restart: unless-stopped
+    ports:
+      - "4200:4200"
+    volumes:
+      # Mount a folder that contains config.json (see config.example.json).
+      # On Unraid this is typically /mnt/user/appdata/printer-obs-overlay
+      # Writable: the server caches parsed G-code metadata in <config>/meta-cache/.
+      - ./config:/config
+    environment:
+      - PORT=4200
+      - CONFIG_PATH=/config/config.json

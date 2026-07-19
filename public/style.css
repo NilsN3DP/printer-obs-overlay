@@ -1,0 +1,301 @@
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  height: 100vh;
+  background: transparent;
+  font-family: 'Inter', 'Segoe UI', Roboto, Arial, sans-serif;
+  color: #ffffff;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Sections switched off via URL are removed from layout entirely. */
+.section-off {
+  display: none !important;
+}
+
+/* Flat orange corner marks, matching the footer frame */
+.corner {
+  position: fixed;
+  width: 56px;
+  height: 56px;
+  border-color: #fa6831;
+  border-style: solid;
+  border-width: 0;
+  pointer-events: none;
+}
+
+.corner--tl { top: 20px; left: 20px; border-top-width: 3px; border-left-width: 3px; }
+.corner--tr { top: 20px; right: 20px; border-top-width: 3px; border-right-width: 3px; }
+.corner--bl { bottom: 142px; left: 20px; border-bottom-width: 3px; border-left-width: 3px; }
+.corner--br { bottom: 142px; right: 20px; border-bottom-width: 3px; border-right-width: 3px; }
+
+.footer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  min-height: 122px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 0 32px;
+  background: rgba(22, 22, 22, 0.95);
+  border-top: 3px solid #fa6831;
+}
+
+.divider {
+  width: 1px;
+  align-self: stretch;
+  margin: 26px 0;
+  background: #3a3a3a;
+  flex-shrink: 0;
+}
+
+.brand {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 7px;
+  flex-shrink: 0;
+}
+
+.handle {
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  color: #ffffff;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.handle-accent { color: #fa6831; font-weight: 700; }
+
+.socials { display: flex; align-items: center; gap: 10px; }
+.social-icon { width: 17px; height: 17px; color: #b0b0b0; }
+
+.printer-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #fa6831;
+  white-space: nowrap;
+  flex-shrink: 0;
+  letter-spacing: 0.02em;
+}
+
+.offline-notice {
+  font-size: 15px;
+  font-weight: 500;
+  color: #e08a8a;
+}
+
+.hidden { display: none; }
+
+.content {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex: 1;
+  min-width: 0;
+}
+
+.job-block {
+  flex: 1;
+  min-width: 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.job-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.state {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  width: 86px;
+  text-align: center;
+}
+
+.state--offline { background: #3a3a3a; color: #d4d4d4; }
+.state--printing { background: #fa6831; color: #ffffff; }
+.state--idle { background: #2e5c3d; color: #a8e0bc; }
+.state--paused { background: #6b5a1e; color: #f0dc9a; }
+.state--error { background: #6e2424; color: #f0a0a0; }
+
+.filename {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #b0b0b0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.progress-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.progress-bar {
+  width: 300px;
+  flex-shrink: 0;
+  height: 8px;
+  border-radius: 2px;
+  background: #3a3a3a;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: #fa6831;
+  transition: width 0.4s ease;
+}
+
+.progress-pct {
+  font-size: 16px;
+  font-weight: 800;
+  color: #fa6831;
+  width: 52px;
+  flex-shrink: 0;
+}
+
+.time-row {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+  font-size: 13px;
+  font-weight: 500;
+  color: #9a9a9a;
+}
+
+.time-value {
+  font-weight: 700;
+  color: #ffffff;
+  min-width: 58px;
+}
+
+.time-sep { margin-right: 10px; }
+
+/* PrusaConnect-style metric boxes: label above, flat dark box below.
+   Every box has a fixed width so live values never shift the layout. */
+.metrics {
+  display: flex;
+  gap: 14px;
+  flex-shrink: 0;
+}
+
+.metric {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.metric-label {
+  font-size: 9.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #9a9a9a;
+  white-space: nowrap;
+}
+
+.metric-box {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 42px;
+  padding: 0 12px;
+  background: #2c2c2c;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.metric--nozzle .metric-box,
+.metric--bed .metric-box { width: 148px; }
+.metric--filament .metric-box { width: 108px; justify-content: center; }
+.metric--changes .metric-box { width: 116px; justify-content: center; }
+.metric--tool .metric-box { width: 88px; justify-content: center; }
+.metric--waste .metric-box { width: 132px; justify-content: center; }
+.metric--layer .metric-box { width: 116px; justify-content: center; }
+.metric--speed .metric-box,
+.metric--flow .metric-box { width: 74px; justify-content: center; }
+.metric--z .metric-box { width: 104px; justify-content: center; }
+.metric--fan .metric-box { width: 112px; justify-content: center; }
+
+.color-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  flex-shrink: 0;
+}
+
+.icon {
+  width: 20px;
+  height: 20px;
+  color: #fa6831;
+  flex-shrink: 0;
+}
+
+.metric-value {
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.metric-sub {
+  font-size: 11px;
+  font-weight: 500;
+  color: #9a9a9a;
+}
+
+/* ---- Card layout: compact floating panel (top-left), wraps content ---- */
+.layout-card .corner { display: none; }
+
+.layout-card .footer {
+  position: fixed;
+  left: 24px;
+  right: auto;
+  top: 24px;
+  bottom: auto;
+  width: 420px;
+  min-height: 0;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 14px;
+  padding: 18px 20px;
+  border-radius: 14px;
+  border-top: none;
+  border-left: 3px solid #fa6831;
+}
+
+.layout-card .divider {
+  width: auto;
+  height: 1px;
+  margin: 0;
+}
+
+.layout-card .brand { flex-direction: row; justify-content: space-between; align-items: center; }
+.layout-card .printer-name { width: 100%; }
+.layout-card .content { flex-direction: column; align-items: stretch; gap: 14px; }
+.layout-card .job-block { min-width: 0; }
+.layout-card .progress-bar { width: auto; flex: 1; }
+.layout-card .metrics { flex-wrap: wrap; gap: 10px; }
+.layout-card .metric-box { height: 38px; }
