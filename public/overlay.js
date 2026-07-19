@@ -69,6 +69,8 @@ const el = {
   progressPct: document.getElementById('progressPct'),
   timeRemaining: document.getElementById('timeRemaining'),
   timeElapsed: document.getElementById('timeElapsed'),
+  timeTotal: document.getElementById('timeTotal'),
+  doneAt: document.getElementById('doneAt'),
   nozzleTemp: document.getElementById('nozzleTemp'),
   nozzleTarget: document.getElementById('nozzleTarget'),
   bedTemp: document.getElementById('bedTemp'),
@@ -114,6 +116,12 @@ function formatDuration(totalSeconds) {
   return `${m}m ${String(s % 60).padStart(2, '0')}s`;
 }
 
+function formatClockFromNow(seconds) {
+  if (!Number.isFinite(Number(seconds))) return '--:--';
+  return new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit' })
+    .format(new Date(Date.now() + Math.max(0, Number(seconds)) * 1000));
+}
+
 function setState(stateKey) {
   el.state.textContent = STATE_LABELS[stateKey] || stateKey || 'Unknown';
   el.state.className = `state ${STATE_CLASSES[stateKey] || 'state--idle'}`;
@@ -157,6 +165,9 @@ function render(data) {
 
   el.timeRemaining.textContent = formatDuration(job.time_remaining);
   el.timeElapsed.textContent = formatDuration(job.time_printing);
+  const totalTime = Number(job.time_printing) + Number(job.time_remaining);
+  el.timeTotal.textContent = Number.isFinite(totalTime) ? formatDuration(totalTime) : '--:--';
+  el.doneAt.textContent = formatClockFromNow(job.time_remaining);
 
   el.nozzleTemp.textContent = `${Math.round(printer.temp_nozzle ?? 0)}°C`;
   el.nozzleTarget.textContent = `/ ${Math.round(printer.target_nozzle ?? 0)}°C`;

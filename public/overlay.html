@@ -48,9 +48,16 @@
 
     <div id="content" class="content hidden">
       <div class="job-block" data-group="job">
-        <div class="job-top">
-          <span id="state" class="state state--offline" data-section="status">Connecting…</span>
-          <span class="filename" id="filename" data-section="file">—</span>
+        <div class="job-copy">
+          <div class="job-top">
+            <span class="filename" id="filename" data-section="file">—</span>
+            <span id="state" class="state state--offline" data-section="status">Connecting…</span>
+          </div>
+          <div class="job-sub" data-section="time">
+            <span id="timeRemaining">--:--</span>
+            <span>left · done</span>
+            <span id="doneAt">--:--</span>
+          </div>
         </div>
         <div class="progress-row" data-section="progress">
           <div class="progress-bar">
@@ -59,10 +66,10 @@
           <span id="progressPct" class="progress-pct">0%</span>
         </div>
         <div class="time-row" data-section="time">
-          <span id="timeRemaining" class="time-value">--:--</span>
-          <span class="time-sep">remaining</span>
           <span id="timeElapsed" class="time-value">--:--</span>
-          <span class="time-sep">elapsed</span>
+          <span class="time-sep">elapsed&nbsp; / &nbsp;~</span>
+          <span id="timeTotal" class="time-value">--:--</span>
+          <span class="time-sep">total</span>
         </div>
       </div>
 
