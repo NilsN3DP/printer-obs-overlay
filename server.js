@@ -9,6 +9,13 @@ import { downloadFile, parseFile, computeLive } from './gcode-meta.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const PORT = Number(process.env.PORT || 4200);
+const PACKAGE_VERSION = (() => {
+  try {
+    return JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8')).version || '0.0.0';
+  } catch {
+    return process.env.npm_package_version || '0.0.0';
+  }
+})();
 
 const CONFIG_CANDIDATES = [
   ...(process.env.CONFIG_PATH ? [process.env.CONFIG_PATH] : []),
@@ -571,7 +578,7 @@ app.get('/api/health', (req, res) => {
   });
   res.json({
     ok: true,
-    version: process.env.npm_package_version || '1.0.0',
+    version: PACKAGE_VERSION,
     pollIntervalMs: config.pollIntervalMs,
     demoMode: config.demoMode,
     printers,
