@@ -137,6 +137,7 @@ function normalizeConfig(cfg) {
         username: String(p.username || p.user || ''),
         password: String(p.password || ''),
         cameraUrl: String(p.cameraUrl || ''),
+        presetId: String(p.presetId || ''),
         // g pro Toolwechsel fuer die Waste-Schaetzung, wenn der Slicer keine
         // Wipe-/Purge-Gramm mitschreibt (0 = Fallback aus)
         wasteGramsPerChange: Number(p.wasteGramsPerChange ?? cfg.wasteGramsPerChange ?? 0) || 0,
@@ -172,6 +173,7 @@ function normalizeConfig(cfg) {
       username: '',
       password: '',
       cameraUrl: '',
+      presetId: '',
       model: 'coreone-indx',
       wasteGramsPerChange: 0.022,
       slots: normalizeSlots(Array.from({ length: 8 }, (_, i) => ({ slot: i + 1, empty: i > 3 }))),
@@ -237,6 +239,7 @@ function publicConfig() {
       username: p.username || '',
       passwordSet: Boolean(p.password),
       cameraUrl: p.cameraUrl || '',
+      presetId: p.presetId || '',
       wasteGramsPerChange: p.wasteGramsPerChange,
       slots: p.slots,
     })),
@@ -267,6 +270,7 @@ function persistConfig(nextPublic) {
           username: String(p.username || ''),
           password,
           cameraUrl: String(p.cameraUrl || ''),
+          presetId: String(p.presetId || ''),
           wasteGramsPerChange: Number(p.wasteGramsPerChange || 0),
           slots: normalizeSlots(p.slots),
         };

@@ -215,6 +215,7 @@ function collectPrinterForms() {
       username: get('username'),
       password: get('password') || '__KEEP__',
       cameraUrl: get('cameraUrl'),
+      presetId: get('presetId'),
       wasteGramsPerChange: Number(get('wasteGramsPerChange') || 0),
       slots,
     };
@@ -227,6 +228,17 @@ function populateModelSelect(select, selected = 'custom') {
     const opt = document.createElement('option');
     opt.value = model.id;
     opt.textContent = model.name;
+    select.appendChild(opt);
+  }
+  select.value = selected;
+}
+
+function populatePrinterPresetSelect(select, selected = '') {
+  select.innerHTML = '<option value="">Global / URL</option>';
+  for (const preset of appConfig.presets || []) {
+    const opt = document.createElement('option');
+    opt.value = preset.id;
+    opt.textContent = preset.name;
     select.appendChild(opt);
   }
   select.value = selected;
@@ -317,6 +329,7 @@ function addPrinterForm(printer = {}) {
     username: printer.username || '',
     password: '',
     cameraUrl: printer.cameraUrl || '',
+    presetId: printer.presetId || '',
     wasteGramsPerChange: printer.wasteGramsPerChange ?? 0.022,
     slots: printer.slots || [],
   };
@@ -325,6 +338,7 @@ function addPrinterForm(printer = {}) {
     if (field && key !== 'model') field.value = value;
   }
   populateModelSelect(form.querySelector('[data-field="model"]'), data.model);
+  populatePrinterPresetSelect(form.querySelector('[data-field="presetId"]'), data.presetId);
   renderSlotEditor(form, data.slots);
   const saved = [
     printer.apiKeySet ? 'Key gespeichert' : null,
