@@ -15,3 +15,4 @@ services:
     environment:
       - PORT=4200
       - CONFIG_PATH=/config/config.json
+      - PUBLIC_BASE_URL=http://192.168.1.234:4200

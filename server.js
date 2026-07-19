@@ -10,6 +10,7 @@ import { downloadFile, parseFile, computeLive } from './gcode-meta.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const PORT = Number(process.env.PORT || 4200);
+const PUBLIC_BASE_URL = String(process.env.PUBLIC_BASE_URL || '').replace(/\/+$/, '');
 const PACKAGE_VERSION = (() => {
   try {
     return JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8')).version || '0.0.0';
@@ -205,6 +206,7 @@ function publicConfig() {
   return {
     source: configSource,
     writablePath: writableConfigFile(),
+    publicBaseUrl: PUBLIC_BASE_URL,
     pollIntervalMs: config.pollIntervalMs,
     demoMode: config.demoMode,
     theme: config.theme,

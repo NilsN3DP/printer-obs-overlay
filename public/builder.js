@@ -105,6 +105,10 @@ function visibleSectionsForPrinter(sections, printer) {
   return sections.filter((key) => !TOOLCHANGE_SECTIONS.has(key));
 }
 
+function overlayBaseUrl() {
+  return (appConfig.publicBaseUrl || window.location.origin).replace(/\/+$/, '');
+}
+
 function buildUrl(absolute, printerId = printerSelect.value) {
   const printer = printerById(printerId);
   const params = new URLSearchParams();
@@ -119,7 +123,7 @@ function buildUrl(absolute, printerId = printerSelect.value) {
   const chosen = visibleSectionsForPrinter(selectedSections(), printer);
   if (chosen.length !== SECTIONS.length) params.set('sections', chosen.join(','));
   const rel = `overlay.html${params.toString() ? `?${params}` : ''}`;
-  return absolute ? `${window.location.origin}/${rel}` : rel;
+  return absolute ? `${overlayBaseUrl()}/${rel}` : rel;
 }
 
 function update() {
