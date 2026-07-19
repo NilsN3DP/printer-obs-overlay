@@ -12,7 +12,7 @@
       "id": "stream-footer",
       "name": "Stream Footer",
       "layout": "bar",
-      "sections": ["frame", "brand", "printerName", "status", "file", "progress", "time", "nozzle", "bed", "filament", "changes", "tool", "waste", "layer"]
+      "sections": ["frame", "brand", "printerName", "status", "file", "progress", "time", "nozzle", "bed", "filament", "changes", "tool", "slots", "waste", "layer"]
     }
   ],
   "printers": [
@@ -26,7 +26,11 @@
       "password": "DEIN_PRUSALINK_PASSWORT",
       "apiKey": "",
       "cameraUrl": "http://192.168.1.122/camera/snapshot",
-      "wasteGramsPerChange": 0.022
+      "wasteGramsPerChange": 0.022,
+      "slots": [
+        { "slot": 1, "brand": "Prusament", "name": "Pistachio Green", "material": "PETG", "color": "#8aa05b", "empty": false },
+        { "slot": 2, "brand": "", "name": "", "material": "", "color": "", "empty": true }
+      ]
     },
     {
       "id": "mk4",

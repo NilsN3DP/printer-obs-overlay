@@ -37,19 +37,19 @@ html, body {
 
 .corner--tl { top: 20px; left: 20px; border-top-width: 3px; border-left-width: 3px; }
 .corner--tr { top: 20px; right: 20px; border-top-width: 3px; border-right-width: 3px; }
-.corner--bl { bottom: 142px; left: 20px; border-bottom-width: 3px; border-left-width: 3px; }
-.corner--br { bottom: 142px; right: 20px; border-bottom-width: 3px; border-right-width: 3px; }
+.corner--bl { bottom: 166px; left: 20px; border-bottom-width: 3px; border-left-width: 3px; }
+.corner--br { bottom: 166px; right: 20px; border-bottom-width: 3px; border-right-width: 3px; }
 
 .footer {
   position: fixed;
   left: 0;
   right: 0;
   bottom: 0;
-  min-height: 122px;
+  min-height: 146px;
   display: flex;
   align-items: center;
   gap: 24px;
-  padding: 0 32px;
+  padding: 13px 32px;
   background: rgba(22, 22, 22, 0.95);
   border-top: 3px solid var(--accent);
 }
@@ -110,18 +110,21 @@ html, body {
 
 .content {
   display: flex;
-  align-items: center;
-  gap: 24px;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 10px;
   flex: 1;
   min-width: 0;
 }
 
 .job-block {
-  flex: 1;
+  flex: 0 0 auto;
   min-width: 260px;
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
+  display: grid;
+  grid-template-columns: minmax(220px, auto) minmax(260px, 1fr) auto;
+  align-items: center;
+  gap: 16px;
 }
 
 .job-top {
@@ -148,6 +151,7 @@ html, body {
 .state--idle { background: #2e5c3d; color: #a8e0bc; }
 .state--paused { background: #6b5a1e; color: #f0dc9a; }
 .state--error { background: #6e2424; color: #f0a0a0; }
+.state--swapping { background: #6b3a1e; color: #ffd2b7; }
 
 .filename {
   font-size: 12.5px;
@@ -165,8 +169,8 @@ html, body {
 }
 
 .progress-bar {
-  width: 300px;
-  flex-shrink: 0;
+  width: auto;
+  flex: 1;
   height: 8px;
   border-radius: 2px;
   background: #3a3a3a;
@@ -207,9 +211,11 @@ html, body {
 /* PrusaConnect-style metric boxes: label above, flat dark box below.
    Every box has a fixed width so live values never shift the layout. */
 .metrics {
-  display: flex;
-  gap: 14px;
-  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, max-content));
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
 }
 
 .metric {
@@ -239,16 +245,51 @@ html, body {
 }
 
 .metric--nozzle .metric-box,
-.metric--bed .metric-box { width: 148px; }
-.metric--filament .metric-box { width: 108px; justify-content: center; }
-.metric--changes .metric-box { width: 116px; justify-content: center; }
-.metric--tool .metric-box { width: 88px; justify-content: center; }
-.metric--waste .metric-box { width: 132px; justify-content: center; }
-.metric--layer .metric-box { width: 116px; justify-content: center; }
+.metric--bed .metric-box { width: 125px; }
+.metric--filament .metric-box { width: 180px; justify-content: flex-start; overflow: hidden; }
+.metric--filament .metric-value { overflow: hidden; text-overflow: ellipsis; }
+.metric--changes .metric-box { width: 100px; justify-content: center; }
+.metric--tool .metric-box { width: 70px; justify-content: center; }
+.metric--slots { min-width: 180px; }
+.slot-rail {
+  height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 9px;
+  background: #2c2c2c;
+  border-radius: 4px;
+  color: #888;
+}
+.slot-item {
+  position: relative;
+  width: 17px;
+  height: 29px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 3px;
+  border: 1px solid #555;
+  border-radius: 4px;
+  color: #aaa;
+  font-size: 8px;
+}
+.slot-item i {
+  position: absolute;
+  top: 3px;
+  width: 8px;
+  height: 5px;
+  border-radius: 2px;
+}
+.slot-item b { font-weight: 700; }
+.slot-item.active { border-color: var(--accent); color: #fff; box-shadow: 0 0 0 1px var(--accent); }
+.slot-item.empty { opacity: 0.38; border-style: dashed; }
+.metric--waste .metric-box { width: 110px; justify-content: center; }
+.metric--layer .metric-box { width: 100px; justify-content: center; }
 .metric--speed .metric-box,
 .metric--flow .metric-box { width: 74px; justify-content: center; }
-.metric--z .metric-box { width: 104px; justify-content: center; }
-.metric--fan .metric-box { width: 112px; justify-content: center; }
+.metric--z .metric-box { width: 90px; justify-content: center; }
+.metric--fan .metric-box { width: 100px; justify-content: center; }
 
 .color-dot {
   width: 14px;
@@ -306,7 +347,7 @@ html, body {
 .layout-card .brand { flex-direction: row; justify-content: space-between; align-items: center; }
 .layout-card .printer-name { width: 100%; }
 .layout-card .content { flex-direction: column; align-items: stretch; gap: 14px; }
-.layout-card .job-block { min-width: 0; }
+.layout-card .job-block { min-width: 0; display: flex; flex-direction: column; align-items: stretch; gap: 7px; }
 .layout-card .progress-bar { width: auto; flex: 1; }
-.layout-card .metrics { flex-wrap: wrap; gap: 10px; }
+.layout-card .metrics { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-start; }
 .layout-card .metric-box { height: 38px; }

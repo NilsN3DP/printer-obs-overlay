@@ -1,7 +1,7 @@
 // All selectable sections, in the order the builder UI shows them.
 const ALL_SECTIONS = [
   'frame', 'brand', 'printerName', 'status', 'file', 'progress', 'time',
-  'nozzle', 'bed', 'filament', 'changes', 'tool', 'waste', 'layer', 'speed', 'flow', 'z', 'fanHotend', 'fanPrint',
+  'nozzle', 'bed', 'filament', 'changes', 'tool', 'slots', 'waste', 'layer', 'speed', 'flow', 'z', 'fanHotend', 'fanPrint',
 ];
 
 const params = new URLSearchParams(window.location.search);
@@ -77,6 +77,7 @@ const el = {
   statMaterial: document.getElementById('statMaterial'),
   statChanges: document.getElementById('statChanges'),
   statTool: document.getElementById('statTool'),
+  slotRail: document.getElementById('slotRail'),
   statLayer: document.getElementById('statLayer'),
   statWaste: document.getElementById('statWaste'),
   statWasteSub: document.getElementById('statWasteSub'),
@@ -90,13 +91,14 @@ const el = {
 const STATE_LABELS = {
   IDLE: 'Ready', READY: 'Ready', BUSY: 'Busy', PRINTING: 'Printing',
   PAUSED: 'Paused', FINISHED: 'Finished', STOPPED: 'Stopped',
-  ERROR: 'Error', ATTENTION: 'Attention',
+  ERROR: 'Error', ATTENTION: 'Attention', SWAPPING: 'Swapping',
 };
 
 const STATE_CLASSES = {
   IDLE: 'state--idle', READY: 'state--idle', BUSY: 'state--printing',
   PRINTING: 'state--printing', PAUSED: 'state--paused', FINISHED: 'state--idle',
   STOPPED: 'state--paused', ERROR: 'state--error', ATTENTION: 'state--error',
+  SWAPPING: 'state--swapping',
 };
 
 function formatDuration(totalSeconds) {
@@ -143,7 +145,7 @@ function render(data) {
   const printer = data.printer || {};
   const job = data.job || {};
 
-  setState(printer.state);
+  setState(printer.swap_in_progress ? 'SWAPPING' : printer.state);
 
   const fileName = job.file?.display_name || job.file?.name || '—';
   el.filename.textContent = fileName;
@@ -162,7 +164,8 @@ function render(data) {
   el.bedTemp.textContent = `${Math.round(printer.temp_bed ?? 0)}°C`;
   el.bedTarget.textContent = `/ ${Math.round(printer.target_bed ?? 0)}°C`;
 
-  el.statMaterial.textContent = printer.material || '–';
+  el.statMaterial.textContent = printer.filament_display || printer.material || '–';
+  el.statMaterial.title = printer.filament_display || printer.material || '';
   if (printer.filament_color) {
     el.filamentColor.style.background = printer.filament_color;
     el.filamentColor.classList.remove('hidden');
@@ -179,10 +182,12 @@ function render(data) {
   }
 
   if (printer.tool != null) {
-    el.statTool.textContent = printer.tools_total ? `${printer.tool} / ${printer.tools_total}` : `T${printer.tool}`;
+    el.statTool.textContent = printer.swap_in_progress ? `T${printer.tool} ↻` : `T${printer.tool}`;
   } else {
     el.statTool.textContent = '–';
   }
+
+  renderSlots(printer.filament_slots || [], printer.tool);
 
   const wasteFill = printer.waste_fill;
   const wasteCap = printer.waste_capacity;
@@ -210,6 +215,29 @@ function render(data) {
   el.statZ.textContent = `${(printer.axis_z ?? 0).toFixed(2)} mm`;
   el.statFanHotend.textContent = `${printer.fan_hotend ?? '–'} RPM`;
   el.statFanPrint.textContent = `${printer.fan_print ?? '–'} RPM`;
+}
+
+function renderSlots(slots, activeTool) {
+  el.slotRail.innerHTML = '';
+  if (!slots.length) {
+    el.slotRail.textContent = '–';
+    return;
+  }
+  for (const slot of slots) {
+    const item = document.createElement('span');
+    item.className = 'slot-item';
+    item.classList.toggle('active', Number(slot.slot) === Number(activeTool));
+    item.classList.toggle('empty', Boolean(slot.empty));
+    item.title = slot.empty
+      ? `Slot ${slot.slot}: leer`
+      : [slot.brand, slot.name, slot.material].filter(Boolean).join(' ') || `Slot ${slot.slot}`;
+    const cap = document.createElement('i');
+    cap.style.background = slot.color || '#555';
+    const number = document.createElement('b');
+    number.textContent = slot.slot;
+    item.append(cap, number);
+    el.slotRail.appendChild(item);
+  }
 }
 
 async function loadPrinterName() {

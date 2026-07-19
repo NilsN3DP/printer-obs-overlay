@@ -11,6 +11,7 @@ const SECTIONS = [
   { key: 'filament', label: 'Filament' },
   { key: 'changes', label: 'Tool-/Filamentwechsel' },
   { key: 'tool', label: 'Aktives Tool' },
+  { key: 'slots', label: 'INDX-Slots' },
   { key: 'waste', label: 'Waste' },
   { key: 'layer', label: 'Layer' },
   { key: 'speed', label: 'Speed' },
@@ -21,7 +22,7 @@ const SECTIONS = [
 ];
 
 const DEFAULT_SOCIALS = ['youtube', 'instagram'];
-const TOOLCHANGE_SECTIONS = new Set(['changes', 'tool', 'waste']);
+const TOOLCHANGE_SECTIONS = new Set(['changes', 'tool', 'slots', 'waste']);
 let appConfig = { printers: [], presets: [], theme: {}, demoMode: true, pollIntervalMs: 2000, printerModels: [] };
 
 const $ = (id) => document.getElementById(id);
@@ -196,6 +197,14 @@ async function loadHealth() {
 function collectPrinterForms() {
   return [...printerEditor.querySelectorAll('.printer-form')].map((form) => {
     const get = (name) => form.querySelector(`[data-field="${name}"]`)?.value.trim() || '';
+    const slots = [...form.querySelectorAll('[data-slot-row]')].map((row) => ({
+      slot: Number(row.dataset.slotRow),
+      brand: row.querySelector('[data-slot-field="brand"]').value.trim(),
+      name: row.querySelector('[data-slot-field="name"]').value.trim(),
+      material: row.querySelector('[data-slot-field="material"]').value.trim(),
+      color: row.querySelector('[data-slot-field="color"]').value,
+      empty: row.querySelector('[data-slot-field="empty"]').checked,
+    }));
     return {
       id: get('id'),
       name: get('name'),
@@ -207,6 +216,7 @@ function collectPrinterForms() {
       password: get('password') || '__KEEP__',
       cameraUrl: get('cameraUrl'),
       wasteGramsPerChange: Number(get('wasteGramsPerChange') || 0),
+      slots,
     };
   }).filter((p) => p.id);
 }
@@ -227,6 +237,7 @@ function updateFormCapabilities(form) {
   const caps = modelCapabilities(model);
   const note = form.querySelector('[data-capabilities]');
   const indxField = form.querySelector('[data-indx-field]');
+  const slotSection = form.querySelector('[data-slot-section]');
   const chips = [
     caps.board ? `Board: ${caps.board}` : null,
     caps.indx ? 'INDX' : null,
@@ -235,6 +246,55 @@ function updateFormCapabilities(form) {
   ].filter(Boolean);
   note.textContent = chips.length ? chips.join(' · ') : 'Keine Spezialfunktionen erkannt';
   indxField.classList.toggle('hidden', !caps.indx && !caps.toolchanger && !caps.xl);
+  slotSection.classList.toggle('hidden', !caps.indx && !caps.toolchanger && !caps.xl);
+}
+
+function slotCountForModel(model) {
+  if (model === 'coreone-indx') return 8;
+  if (model === 'xl-5t') return 5;
+  if (model === 'xl-2t') return 2;
+  return modelCapabilities(model).toolchanger ? 5 : 0;
+}
+
+function renderSlotEditor(form, slots = []) {
+  const editor = form.querySelector('[data-slot-editor]');
+  const wanted = slotCountForModel(form.querySelector('[data-field="model"]').value);
+  const previous = slots.length ? slots : [...editor.querySelectorAll('[data-slot-row]')].map((row) => ({
+    slot: Number(row.dataset.slotRow),
+    brand: row.querySelector('[data-slot-field="brand"]').value,
+    name: row.querySelector('[data-slot-field="name"]').value,
+    material: row.querySelector('[data-slot-field="material"]').value,
+    color: row.querySelector('[data-slot-field="color"]').value,
+    empty: row.querySelector('[data-slot-field="empty"]').checked,
+  }));
+  editor.innerHTML = '';
+  for (let number = 1; number <= wanted; number++) {
+    const slot = previous.find((item) => Number(item.slot) === number) || {};
+    const row = document.createElement('div');
+    row.className = 'slot-edit-row';
+    row.dataset.slotRow = number;
+    row.innerHTML = `
+      <strong>S${number}</strong>
+      <input data-slot-field="brand" placeholder="Hersteller" />
+      <input data-slot-field="name" placeholder="Farbe / Produkt" />
+      <input data-slot-field="material" placeholder="PETG" />
+      <input data-slot-field="color" type="color" value="#666666" title="Farbe" />
+      <label class="slot-empty"><input data-slot-field="empty" type="checkbox" /> leer</label>
+    `;
+    row.querySelector('[data-slot-field="brand"]').value = slot.brand || '';
+    row.querySelector('[data-slot-field="name"]').value = slot.name || '';
+    row.querySelector('[data-slot-field="material"]').value = slot.material || '';
+    row.querySelector('[data-slot-field="color"]').value = /^#[0-9a-f]{6}$/i.test(slot.color || '') ? slot.color : '#666666';
+    row.querySelector('[data-slot-field="empty"]').checked = Boolean(slot.empty) || Object.keys(slot).length === 0;
+    row.querySelectorAll('input:not([type="checkbox"])').forEach((input) => {
+      input.addEventListener('input', () => {
+        if (input.value && input.dataset.slotField !== 'color') {
+          row.querySelector('[data-slot-field="empty"]').checked = false;
+        }
+      });
+    });
+    editor.appendChild(row);
+  }
 }
 
 function renderPrinterEditor() {
@@ -258,12 +318,14 @@ function addPrinterForm(printer = {}) {
     password: '',
     cameraUrl: printer.cameraUrl || '',
     wasteGramsPerChange: printer.wasteGramsPerChange ?? 0.022,
+    slots: printer.slots || [],
   };
   for (const [key, value] of Object.entries(data)) {
     const field = form.querySelector(`[data-field="${key}"]`);
     if (field && key !== 'model') field.value = value;
   }
   populateModelSelect(form.querySelector('[data-field="model"]'), data.model);
+  renderSlotEditor(form, data.slots);
   const saved = [
     printer.apiKeySet ? 'Key gespeichert' : null,
     printer.passwordSet ? 'Passwort gespeichert' : null,
@@ -275,6 +337,7 @@ function addPrinterForm(printer = {}) {
   });
   form.querySelector('[data-test]').addEventListener('click', async () => testForm(form));
   form.querySelector('[data-field="model"]').addEventListener('change', () => {
+    renderSlotEditor(form);
     updateFormCapabilities(form);
     refreshPrinterDerivedUi();
   });

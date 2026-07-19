@@ -243,10 +243,11 @@ function parseIni(text, into) {
 // ---------------------------------------------------------------------------
 
 function parseGcodeText(text, config) {
-  const toolEvents = []; // { tool, p (int %), seq }
+  const toolEvents = []; // { tool, p (int %), r (remaining minutes), seq }
   let layerCount = 0;
   const layerEvents = []; // { p (int %), seq }
   let lastP = 0;
+  let lastR = null;
   let seq = 0;
 
   let start = 0;
@@ -263,18 +264,20 @@ function parseGcodeText(text, config) {
       if (line.startsWith('M73')) {
         const m = /P(\d+)/.exec(line);
         if (m) lastP = Number(m[1]);
+        const r = /(?:^|\s)R(\d+(?:\.\d+)?)/.exec(line);
+        if (r) lastR = Number(r[1]);
       } else if (line.startsWith('M8600')) {
         // INDX-Autofeeder-Wechsel (CFW-Gcode); S<slot> 0-basiert
         const m = /S(\d+)/.exec(line);
-        if (m) toolEvents.push({ tool: Number(m[1]), p: lastP, seq: seq++ });
+        if (m) toolEvents.push({ tool: Number(m[1]), p: lastP, r: lastR, seq: seq++ });
       }
     } else if (c0 === 84 /* T */) {
       const m = /^T(\d+)/.exec(line);
-      if (m) toolEvents.push({ tool: Number(m[1]), p: lastP, seq: seq++ });
+      if (m) toolEvents.push({ tool: Number(m[1]), p: lastP, r: lastR, seq: seq++ });
     } else if (c0 === 59 /* ; */) {
       if (line.startsWith(';LAYER_CHANGE')) {
         layerCount++;
-        layerEvents.push({ p: lastP, seq: seq++ });
+        layerEvents.push({ p: lastP, r: lastR, seq: seq++ });
       } else {
         const eq = line.indexOf('=');
         if (eq > 1) {
@@ -341,18 +344,42 @@ export function parseFile(buf) {
     }
   }
   if (!(wasteTotalG > 0)) wasteTotalG = null;
-  if (wasteTotalG == null && changesTotal > 0) {
+  const totalUsedG = parseFloat(config['total filament used [g]']);
+
+  // INDX-Ramming ist pro Filament/Slot konfiguriert. Statt den Mittelwert mit
+  // allen Wechseln zu multiplizieren, ordnen wir jedem Wechsel das Volumen des
+  // abgelegten Tools zu. Das liefert auch einen belastbaren Live-Zwischenstand.
+  let wasteByChange = null;
+  if (changesTotal > 0) {
     const nums = (v) => (v == null ? [] : String(v).split(/[,;]/).map(parseFloat).filter(Number.isFinite));
-    const avg = (a) => a.reduce((s, x) => s + x, 0) / a.length;
-    const rammingOn = String(config.filament_multitool_ramming ?? '').split(/[,;]/).some((v) => v.trim() === '1');
+    const rammingEnabled = String(config.filament_multitool_ramming ?? '').split(/[,;]/)
+      .map((v) => v.trim() === '1');
     const volumes = nums(config.filament_multitool_ramming_volume);
-    if (rammingOn && volumes.length > 0) {
-      const densities = nums(config.filament_density);
-      const density = densities.length > 0 ? avg(densities) : 1.24;
-      wasteTotalG = (avg(volumes) * density / 1000) * changesTotal;
+    const densities = nums(config.filament_density);
+    if (volumes.length && rammingEnabled.some(Boolean)) {
+      wasteByChange = [];
+      for (let i = 1; i < timeline.toolEvents.length; i++) {
+        const oldTool = timeline.toolEvents[i - 1].tool;
+        const enabled = rammingEnabled[oldTool] ?? rammingEnabled[0] ?? false;
+        const volume = volumes[oldTool] ?? volumes[0];
+        const density = densities[oldTool] ?? densities[0] ?? 1.24;
+        wasteByChange.push(enabled && Number.isFinite(volume) ? volume * density / 1000 : 0);
+      }
+      if (!wasteByChange.some((g) => g > 0)) wasteByChange = null;
     }
   }
-  const totalUsedG = parseFloat(config['total filament used [g]']);
+
+  if (wasteByChange) {
+    const rammingTotal = wasteByChange.reduce((sum, grams) => sum + grams, 0);
+    if (wasteTotalG == null) {
+      wasteTotalG = rammingTotal;
+    } else if (rammingTotal > 0) {
+      // Ein expliziter Purge-/Wipe-Gesamtwert bleibt die Wahrheit; die
+      // slotbezogenen Ramming-Mengen dienen dann nur als Verteilungsschlüssel.
+      const scale = wasteTotalG / rammingTotal;
+      wasteByChange = wasteByChange.map((grams) => grams * scale);
+    }
+  }
 
   return {
     materials,
@@ -361,6 +388,7 @@ export function parseFile(buf) {
       timeline.toolEvents.reduce((m, e) => Math.max(m, e.tool + 1), 0)) || null,
     changesTotal,
     wasteTotalG,
+    wasteByChange,
     totalUsedG: Number.isFinite(totalUsedG) ? totalUsedG : null,
     toolEvents: timeline.toolEvents,
     layerEvents: timeline.layerEvents,
@@ -377,14 +405,26 @@ export function parseFile(buf) {
  */
 export function computeLive(meta, progress, opts = {}) {
   if (!meta || typeof progress !== 'number') return {};
-  const passedTools = meta.toolEvents.filter((e) => e.pe <= progress);
+  const remainingSeconds = opts.timeRemainingSec == null ? Number.NaN : Number(opts.timeRemainingSec);
+  const progressBucket = Math.floor(Math.max(0, progress));
+  const passed = (event) => {
+    if (event.p < progressBucket) return true;
+    if (event.p > progressBucket) return false;
+    if (Number.isFinite(remainingSeconds) && Number.isFinite(event.r)) {
+      // M73 R ist minutenbasiert. Eine halbe Minute Toleranz verhindert
+      // Flattern an der Rundungsgrenze der PrusaLink-Restzeit.
+      return remainingSeconds <= event.r * 60 + 30;
+    }
+    return event.pe <= progress;
+  };
+  const passedTools = meta.toolEvents.filter(passed);
   const currentToolEvent = passedTools[passedTools.length - 1] ?? meta.toolEvents[0];
   const tool0 = currentToolEvent ? currentToolEvent.tool : null;
 
   const changesDone = Math.max(0, passedTools.length - 1);
   let layerNow = 0;
   for (const e of meta.layerEvents) {
-    if (e.pe <= progress) layerNow++; else break;
+    if (passed(e)) layerNow++; else break;
   }
 
   const result = {};
@@ -409,9 +449,15 @@ export function computeLive(meta, progress, opts = {}) {
     wasteTotalG = opts.wasteGramsPerChange * meta.changesTotal;
   }
   if (wasteTotalG != null && meta.changesTotal > 0) {
-    const wasteG = wasteTotalG * (changesDone / meta.changesTotal);
-    result.waste_g = Math.round(wasteG * 10) / 10;
-    result.waste_total_g = Math.round(wasteTotalG * 10) / 10;
+    const exactChanges = Array.isArray(meta.wasteByChange)
+      ? meta.wasteByChange.slice(0, changesDone).reduce((sum, grams) => sum + grams, 0)
+      : null;
+    const wasteG = exactChanges ?? wasteTotalG * (changesDone / meta.changesTotal);
+    const roundGrams = (grams) => grams < 1
+      ? Math.round(grams * 1000) / 1000
+      : Math.round(grams * 10) / 10;
+    result.waste_g = roundGrams(wasteG);
+    result.waste_total_g = roundGrams(wasteTotalG);
     if (meta.totalUsedG) {
       result.waste_pct = Math.round((wasteTotalG / meta.totalUsedG) * 100);
     }

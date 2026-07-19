@@ -424,6 +424,32 @@ input[type="checkbox"], input[type="radio"] { accent-color: #fa6831; width: 16px
   gap: 12px;
 }
 
+.slot-editor-section { margin-top: 14px; }
+.slot-editor-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.slot-editor-head .hint { margin: 0; }
+.slot-editor { display: grid; gap: 6px; }
+.slot-edit-row {
+  display: grid;
+  grid-template-columns: 28px minmax(90px, 1fr) minmax(120px, 1.4fr) 80px 42px 58px;
+  gap: 7px;
+  align-items: center;
+}
+.slot-edit-row strong { color: #fa6831; font-size: 12px; }
+.slot-edit-row input:not([type="color"]) { padding: 7px 8px; font-size: 12px; }
+.slot-edit-row input[type="color"] { height: 32px; padding: 3px; }
+.slot-empty { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #aeb3bc; }
+
+@media (max-width: 800px) {
+  .slot-edit-row { grid-template-columns: 28px 1fr 1fr; }
+  .slot-edit-row input[data-slot-field="material"] { grid-column: 2; }
+}
+
 @media (max-width: 700px) {
   .form-grid { grid-template-columns: 1fr; }
 }

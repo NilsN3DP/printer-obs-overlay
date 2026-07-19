@@ -105,7 +105,7 @@ Hintergrund ist transparent; nur die gewählten Bereiche werden gezeichnet.
 | `poll`     | `&poll=2000`                      | Abfrageintervall im Browser (ms) |
 
 Verfügbare Bereiche: `frame`, `brand`, `printerName`, `status`, `file`, `progress`, `time`,
-`nozzle`, `bed`, `filament`, `changes`, `tool`, `waste`, `layer`, `speed`, `flow`, `z`, `fanHotend`, `fanPrint`.
+`nozzle`, `bed`, `filament`, `changes`, `tool`, `slots`, `waste`, `layer`, `speed`, `flow`, `z`, `fanHotend`, `fanPrint`.
 
 Das Branding-Handle kann im Dashboard gesetzt werden; es wird als URL-Parameter an OBS übergeben.
 
@@ -115,6 +115,13 @@ Das Branding-Handle kann im Dashboard gesetzt werden; es wird als URL-Parameter 
 
 Liefert die meisten Felder und kann G-Code-Metadaten cachen, wenn die laufende Datei per PrusaLink downloadbar ist. Für PrusaLink reicht Benutzername/Passwort inklusive Digest-Auth; ein API-Key ist nur noch eine Alternative. Erweiterte Felder wie Filamentfarbe, Werkzeug, Layer und Waste kommen entweder aus Custom-Firmware oder aus G-Code-Metadaten.
 Der Standardweg fuer INDX/Toolchange-Prüfung ist der Upload im Dashboard: `.gcode` oder `.bgcode` hochladen und vor dem Stream prüfen, ob Toolchanges, Layer und Waste plausibel erkannt werden.
+
+Für INDX und XL kann im Drucker-Editor pro Slot die tatsächlich geladene Rolle gepflegt werden
+(Hersteller, Produkt/Farbe, Material und Hex-Farbe). Diese Angaben überschreiben für das aktive
+Tool die generischen Slicerwerte. Das Overlay zeigt alle Slots und markiert den aktiven Slot.
+Mehrere Wechsel innerhalb desselben Fortschrittsprozents werden zusätzlich über die `M73 R`-
+Restzeit unterschieden. Ein deutlicher Düsentemperaturabfall nahe einem Tool-Event wird mit
+Hysterese als `Swapping` angezeigt; dies ist bewusst eine Schätzung und kein Firmware-Livefeld.
 
 ### OctoPrint
 
