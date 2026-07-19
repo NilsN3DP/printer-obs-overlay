@@ -13,10 +13,22 @@
   <header class="top">
     <h1>Printer OBS Overlay <span class="accent">Dashboard</span></h1>
     <p class="sub">Drucker, Branding, Presets und Toolchange-Analyse zentral verwalten.</p>
+    <div class="top-controls">
+      <nav class="view-tabs" aria-label="Dashboard-Bereiche">
+        <button type="button" class="active" data-view-button="overview">Übersicht</button>
+        <button type="button" data-view-button="printers">Drucker</button>
+        <button type="button" data-view-button="overlay">Overlay</button>
+        <button type="button" data-view-button="toolchanger">Toolchanger</button>
+      </nav>
+      <label class="top-printer-picker">
+        <span class="field-label">Aktiver Drucker</span>
+        <select id="globalPrinterSelect"></select>
+      </label>
+    </div>
   </header>
 
   <main class="page dashboard-layout">
-    <section class="panel span-all">
+    <section class="panel span-all" data-view="overview">
       <div class="panel-head">
         <div>
           <span class="field-label">System</span>
@@ -28,7 +40,7 @@
       <div id="printerCards" class="printer-cards"></div>
     </section>
 
-    <section class="panel">
+    <section class="panel" data-view="printers">
       <div class="panel-head">
         <div>
           <span class="field-label">Setup</span>
@@ -54,7 +66,7 @@
       </div>
     </section>
 
-    <section class="panel span-all">
+    <section class="panel span-all" data-view="overlay">
       <div class="overlay-workbench">
         <div>
           <div class="panel-head compact">
@@ -127,7 +139,7 @@
       </div>
     </section>
 
-    <section class="panel span-all" id="toolchangePanel">
+    <section class="panel span-all" id="toolchangePanel" data-view="toolchanger">
       <div class="panel-head compact">
         <div>
           <span class="field-label">Toolchanger</span>
@@ -163,7 +175,9 @@
         </select></label>
         <label><span class="field-label">Druckermodell</span><select data-field="model"></select></label>
         <label><span class="field-label">Host/IP</span><input data-field="host" placeholder="192.168.1.122" /></label>
-        <label><span class="field-label">API-Key</span><input data-field="apiKey" type="password" placeholder="Leer lassen = behalten" /></label>
+        <label><span class="field-label">PrusaLink Benutzer</span><input data-field="username" autocomplete="username" placeholder="maker" /></label>
+        <label><span class="field-label">PrusaLink Passwort</span><input data-field="password" type="password" autocomplete="current-password" placeholder="Leer lassen = behalten" /></label>
+        <label><span class="field-label">API-Key</span><input data-field="apiKey" type="password" placeholder="Optional / leer lassen = behalten" /></label>
         <label><span class="field-label">Kamera-URL</span><input data-field="cameraUrl" placeholder="http://.../snapshot.jpg" /></label>
         <label data-indx-field><span class="field-label">Waste g/Wechsel</span><input data-field="wasteGramsPerChange" type="number" step="0.001" /></label>
       </div>

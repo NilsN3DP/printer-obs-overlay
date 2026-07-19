@@ -22,7 +22,9 @@
       "type": "prusalink",
       "model": "coreone-indx",
       "host": "192.168.1.122",
-      "apiKey": "DEIN_API_KEY_HIER",
+      "username": "maker",
+      "password": "DEIN_PRUSALINK_PASSWORT",
+      "apiKey": "",
       "cameraUrl": "http://192.168.1.122/camera/snapshot",
       "wasteGramsPerChange": 0.022
     },
@@ -32,7 +34,8 @@
       "type": "prusalink",
       "model": "mk4s",
       "host": "192.168.1.130",
-      "apiKey": "ZWEITER_API_KEY"
+      "username": "maker",
+      "password": "DEIN_PRUSALINK_PASSWORT"
     },
     {
       "id": "octo",

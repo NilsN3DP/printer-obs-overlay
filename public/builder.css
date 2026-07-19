@@ -27,6 +27,47 @@ body {
   font-size: 14px;
 }
 
+.top-controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.view-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.view-tabs button {
+  border: 1px solid #333842;
+  border-radius: 7px;
+  background: #1e2127;
+  color: #cfd3da;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  padding: 9px 13px;
+  cursor: pointer;
+}
+
+.view-tabs button:hover {
+  background: #2c2f36;
+}
+
+.view-tabs button.active {
+  border-color: #fa6831;
+  background: #fa6831;
+  color: #fff;
+}
+
+.top-printer-picker {
+  min-width: min(320px, 100%);
+}
+
 .page {
   padding: 20px 32px 40px;
 }
@@ -226,6 +267,7 @@ select {
 }
 
 input[type="text"],
+input:not([type]),
 input[type="password"],
 input[type="number"],
 input[type="file"] {

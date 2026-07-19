@@ -25,6 +25,7 @@ const TOOLCHANGE_SECTIONS = new Set(['changes', 'tool', 'waste']);
 let appConfig = { printers: [], presets: [], theme: {}, demoMode: true, pollIntervalMs: 2000, printerModels: [] };
 
 const $ = (id) => document.getElementById(id);
+const globalPrinterSelect = $('globalPrinterSelect');
 const printerSelect = $('printerSelect');
 const analysisPrinterSelect = $('analysisPrinterSelect');
 const sectionList = $('sectionList');
@@ -44,6 +45,7 @@ const presetName = $('presetName');
 const discoverCidr = $('discoverCidr');
 const discoverResult = $('discoverResult');
 const toolchangePanel = $('toolchangePanel');
+let activeView = localStorage.getItem('printerOverlayView') || 'overview';
 
 for (const s of SECTIONS) {
   const label = document.createElement('label');
@@ -197,6 +199,8 @@ function collectPrinterForms() {
       model: get('model') || 'custom',
       host: get('host'),
       apiKey: get('apiKey') || '__KEEP__',
+      username: get('username'),
+      password: get('password') || '__KEEP__',
       cameraUrl: get('cameraUrl'),
       wasteGramsPerChange: Number(get('wasteGramsPerChange') || 0),
     };
@@ -246,6 +250,8 @@ function addPrinterForm(printer = {}) {
     model: printer.model || 'custom',
     host: printer.host || '',
     apiKey: '',
+    username: printer.username || '',
+    password: '',
     cameraUrl: printer.cameraUrl || '',
     wasteGramsPerChange: printer.wasteGramsPerChange ?? 0.022,
   };
@@ -254,7 +260,11 @@ function addPrinterForm(printer = {}) {
     if (field && key !== 'model') field.value = value;
   }
   populateModelSelect(form.querySelector('[data-field="model"]'), data.model);
-  form.querySelector('[data-title]').textContent = `${data.name || data.id}${printer.apiKeySet ? ' · Key gespeichert' : ''}`;
+  const saved = [
+    printer.apiKeySet ? 'Key gespeichert' : null,
+    printer.passwordSet ? 'Passwort gespeichert' : null,
+  ].filter(Boolean).join(' · ');
+  form.querySelector('[data-title]').textContent = `${data.name || data.id}${saved ? ` · ${saved}` : ''}`;
   form.querySelector('[data-remove]').addEventListener('click', () => {
     form.remove();
     refreshPrinterDerivedUi();
@@ -359,22 +369,28 @@ function renderPrinterSelect() {
   const previous = printerSelect.value;
   const analysisPrevious = analysisPrinterSelect.value;
   printerSelect.innerHTML = '';
+  globalPrinterSelect.innerHTML = '';
   analysisPrinterSelect.innerHTML = '';
   const printers = appConfig.printers || [];
   if (!printers.length) {
     const opt = document.createElement('option');
     opt.textContent = 'Keine Drucker konfiguriert';
     printerSelect.appendChild(opt);
+    globalPrinterSelect.appendChild(opt.cloneNode(true));
     printerSelect.disabled = true;
+    globalPrinterSelect.disabled = true;
   } else {
     printerSelect.disabled = false;
+    globalPrinterSelect.disabled = false;
     for (const p of printers) {
       const opt = document.createElement('option');
       opt.value = p.id;
       opt.textContent = `${p.name} (${p.id})`;
       printerSelect.appendChild(opt);
+      globalPrinterSelect.appendChild(opt.cloneNode(true));
     }
     printerSelect.value = printers.some((p) => p.id === previous) ? previous : printers[0].id;
+    globalPrinterSelect.value = printerSelect.value;
   }
 
   const toolPrinters = printers.filter(supportsToolchange);
@@ -387,6 +403,15 @@ function renderPrinterSelect() {
   if (toolPrinters.length) {
     analysisPrinterSelect.value = toolPrinters.some((p) => p.id === analysisPrevious) ? analysisPrevious : toolPrinters[0].id;
   }
+}
+
+function selectActivePrinter(id) {
+  if (!id) return;
+  printerSelect.value = id;
+  globalPrinterSelect.value = id;
+  const selected = printerById(id);
+  if (selected && supportsToolchange(selected)) analysisPrinterSelect.value = id;
+  update();
 }
 
 function renderPresets() {
@@ -445,7 +470,12 @@ function refreshPrinterDerivedUi() {
     capabilities: modelCapabilities(p.model),
   }]));
   appConfig.printers = [
-    ...forms.map((p) => ({ ...p, capabilities: modelCapabilities(p.model), apiKeySet: p.apiKey === '__KEEP__' })),
+    ...forms.map((p) => ({
+      ...p,
+      capabilities: modelCapabilities(p.model),
+      apiKeySet: p.apiKey === '__KEEP__',
+      passwordSet: p.password === '__KEEP__',
+    })),
     ...(demoMode.checked ? [{ id: 'demo', name: 'Demo Drucker', type: 'demo', model: 'coreone-indx', capabilities: modelCapabilities('coreone-indx') }] : []),
   ];
   if (printerSelect.value && byId.has(printerSelect.value)) {
@@ -458,10 +488,27 @@ function refreshPrinterDerivedUi() {
   updateToolchangeVisibility();
 }
 
+function setView(view) {
+  const hasToolPrinters = (appConfig.printers || []).some(supportsToolchange);
+  activeView = view === 'toolchanger' && !hasToolPrinters ? 'overview' : view;
+  localStorage.setItem('printerOverlayView', activeView);
+  document.querySelectorAll('[data-view]').forEach((panel) => {
+    panel.classList.toggle('hidden', panel.dataset.view !== activeView);
+  });
+  document.querySelectorAll('[data-view-button]').forEach((button) => {
+    const disabled = button.dataset.viewButton === 'toolchanger' && !hasToolPrinters;
+    button.classList.toggle('active', button.dataset.viewButton === activeView);
+    button.classList.toggle('hidden', disabled);
+  });
+  scalePreview();
+}
+
 function updateToolchangeVisibility() {
   const printer = printerById(printerSelect.value);
   const hasToolPrinters = (appConfig.printers || []).some(supportsToolchange);
   toolchangePanel.classList.toggle('hidden', !hasToolPrinters);
+  if (activeView === 'toolchanger' && !hasToolPrinters) activeView = 'overview';
+  setView(activeView);
   sectionList.querySelectorAll('input').forEach((input) => {
     const blocked = TOOLCHANGE_SECTIONS.has(input.value) && printer && !supportsToolchange(printer);
     input.closest('label').classList.toggle('muted', blocked);
@@ -559,9 +606,14 @@ $('uploadForm').addEventListener('submit', analyzeUpload);
 $('selectAll').addEventListener('click', () => { setSelectedSections(SECTIONS.map((s) => s.key)); update(); });
 $('selectNone').addEventListener('click', () => { setSelectedSections([]); update(); });
 document.querySelectorAll('input[name="layout"]').forEach((r) => r.addEventListener('change', update));
-[printerSelect, analysisPrinterSelect, accentColor, brandText].forEach((el) => el.addEventListener('input', update));
+[analysisPrinterSelect, accentColor, brandText].forEach((el) => el.addEventListener('input', update));
+printerSelect.addEventListener('input', () => selectActivePrinter(printerSelect.value));
+globalPrinterSelect.addEventListener('input', () => selectActivePrinter(globalPrinterSelect.value));
 demoMode.addEventListener('change', refreshPrinterDerivedUi);
 document.querySelectorAll('[data-social-toggle]').forEach((el) => el.addEventListener('change', update));
+document.querySelectorAll('[data-view-button]').forEach((button) => {
+  button.addEventListener('click', () => setView(button.dataset.viewButton));
+});
 window.addEventListener('resize', scalePreview);
 
 async function init() {

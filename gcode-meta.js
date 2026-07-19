@@ -19,8 +19,11 @@ import zlib from 'node:zlib';
 // PrusaLink liefert waehrend eines Drucks nur sehr langsam (teils <30 KB/s).
 // Deshalb kein hartes Gesamt-Timeout, sondern ein Inaktivitaets-Watchdog:
 // abgebrochen wird nur, wenn 90 s lang gar keine Daten kommen (Gesamtdeckel 2 h).
-export async function downloadFile(host, apiKey, downloadPath) {
+export async function downloadFile(host, authHeaders = {}, downloadPath) {
   const url = `http://${host}${downloadPath.startsWith('/') ? '' : '/'}${downloadPath}`;
+  const headers = typeof authHeaders === 'string'
+    ? (authHeaders ? { 'X-Api-Key': authHeaders } : {})
+    : authHeaders;
   const controller = new AbortController();
   let watchdog = setTimeout(() => controller.abort(new Error('Download: 90 s keine Daten')), 90000);
   const feed = () => {
@@ -30,7 +33,7 @@ export async function downloadFile(host, apiKey, downloadPath) {
   const overall = setTimeout(() => controller.abort(new Error('Download: 2 h Gesamtlimit')), 120 * 60 * 1000);
 
   try {
-    const res = await fetch(url, { headers: { 'X-Api-Key': apiKey }, signal: controller.signal });
+    const res = await fetch(url, { headers, signal: controller.signal });
     if (!res.ok) {
       throw new Error(`Download ${downloadPath} -> HTTP ${res.status}`);
     }

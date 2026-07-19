@@ -81,7 +81,7 @@ function loadConfig() {
   }
 
   // Fallback: single printer from env
-  if (process.env.PRUSA_HOST && process.env.PRUSA_API_KEY) {
+  if (process.env.PRUSA_HOST && (process.env.PRUSA_API_KEY || (process.env.PRUSA_USERNAME && process.env.PRUSA_PASSWORD))) {
     console.log('Kein config.json gefunden, nutze einzelnen Drucker aus .env');
     const raw = {
       pollIntervalMs: Number(process.env.POLL_INTERVAL_MS || 2000),
@@ -90,7 +90,9 @@ function loadConfig() {
           id: 'default',
           name: process.env.PRUSA_NAME || 'Prusa',
           host: process.env.PRUSA_HOST,
-          apiKey: process.env.PRUSA_API_KEY,
+          apiKey: process.env.PRUSA_API_KEY || '',
+          username: process.env.PRUSA_USERNAME || '',
+          password: process.env.PRUSA_PASSWORD || '',
         },
       ],
     };
@@ -118,6 +120,8 @@ function normalizeConfig(cfg) {
         model: inferModel(p),
         host: String(p.host || '').replace(/^https?:\/\//, '').replace(/\/+$/, ''),
         apiKey: String(p.apiKey || p.api_key || ''),
+        username: String(p.username || p.user || ''),
+        password: String(p.password || ''),
         cameraUrl: String(p.cameraUrl || ''),
         // g pro Toolwechsel fuer die Waste-Schaetzung, wenn der Slicer keine
         // Wipe-/Purge-Gramm mitschreibt (0 = Fallback aus)
@@ -125,8 +129,11 @@ function normalizeConfig(cfg) {
       };
     })
     .filter((p) => {
-      if (p.type !== 'demo' && (!p.host || (p.type !== 'moonraker' && !p.apiKey))) {
-        console.warn(`Drucker "${p.id}" ohne host/apiKey, ignoriert.`);
+      const hasPrusaAuth = p.apiKey || (p.username && p.password);
+      const hasAuth = p.type === 'moonraker' || p.type === 'demo'
+        || (p.type === 'prusalink' ? hasPrusaAuth : p.apiKey);
+      if (p.type !== 'demo' && (!p.host || !hasAuth)) {
+        console.warn(`Drucker "${p.id}" ohne host/auth, ignoriert.`);
         return false;
       }
       if (!['prusalink', 'octoprint', 'moonraker', 'demo'].includes(p.type)) {
@@ -147,6 +154,8 @@ function normalizeConfig(cfg) {
       type: 'demo',
       host: '',
       apiKey: '',
+      username: '',
+      password: '',
       cameraUrl: '',
       model: 'coreone-indx',
       wasteGramsPerChange: 0.022,
@@ -208,6 +217,8 @@ function publicConfig() {
       capabilities: modelCapabilities(p.model),
       host: p.host,
       apiKeySet: Boolean(p.apiKey),
+      username: p.username || '',
+      passwordSet: Boolean(p.password),
       cameraUrl: p.cameraUrl || '',
       wasteGramsPerChange: p.wasteGramsPerChange,
     })),
@@ -227,6 +238,7 @@ function persistConfig(nextPublic) {
         const id = String(p.id || `printer${i + 1}`).trim();
         const existing = currentById.get(id);
         const apiKey = p.apiKey && p.apiKey !== '__KEEP__' ? String(p.apiKey) : existing?.apiKey || '';
+        const password = p.password && p.password !== '__KEEP__' ? String(p.password) : existing?.password || '';
         return {
           id,
           name: String(p.name || id),
@@ -234,6 +246,8 @@ function persistConfig(nextPublic) {
           model: String(p.model || 'custom'),
           host: String(p.host || '').replace(/^https?:\/\//, '').replace(/\/+$/, ''),
           apiKey,
+          username: String(p.username || ''),
+          password,
           cameraUrl: String(p.cameraUrl || ''),
           wasteGramsPerChange: Number(p.wasteGramsPerChange || 0),
         };
@@ -276,9 +290,19 @@ function reconcileStates() {
 }
 reconcileStates();
 
-async function fetchJson(host, apiKey, pathname, headers = {}) {
-  const res = await fetch(`http://${host}${pathname}`, {
-    headers: { ...headers, ...(apiKey ? { 'X-Api-Key': apiKey } : {}) },
+function printerAuthHeaders(printer, headers = {}) {
+  const next = { ...headers };
+  if (printer?.apiKey) {
+    next['X-Api-Key'] = printer.apiKey;
+  } else if (printer?.username && printer?.password) {
+    next.Authorization = `Basic ${Buffer.from(`${printer.username}:${printer.password}`).toString('base64')}`;
+  }
+  return next;
+}
+
+async function fetchJson(printer, pathname, headers = {}) {
+  const res = await fetch(`http://${printer.host}${pathname}`, {
+    headers: printerAuthHeaders(printer, headers),
     signal: AbortSignal.timeout(4000),
   });
   if (!res.ok) {
@@ -290,8 +314,8 @@ async function fetchJson(host, apiKey, pathname, headers = {}) {
 async function pollPrusaLink(printer) {
   try {
     const [status, job] = await Promise.all([
-      fetchJson(printer.host, printer.apiKey, '/api/v1/status'),
-      fetchJson(printer.host, printer.apiKey, '/api/v1/job').catch(() => null),
+      fetchJson(printer, '/api/v1/status'),
+      fetchJson(printer, '/api/v1/job').catch(() => null),
     ]);
 
     states.set(printer.id, {
@@ -340,8 +364,8 @@ function normalizeOctoPrint(printerResp, jobResp) {
 async function pollOctoPrint(printer) {
   try {
     const [printerResp, jobResp] = await Promise.all([
-      fetchJson(printer.host, printer.apiKey, '/api/printer'),
-      fetchJson(printer.host, printer.apiKey, '/api/job').catch(() => ({})),
+      fetchJson(printer, '/api/printer'),
+      fetchJson(printer, '/api/job').catch(() => ({})),
     ]);
     const normalized = normalizeOctoPrint(printerResp, jobResp);
     states.set(printer.id, {
@@ -392,7 +416,7 @@ async function pollMoonraker(printer) {
   try {
     const query =
       '/printer/objects/query?extruder&heater_bed&print_stats&display_status&toolhead';
-    const status = await fetchJson(printer.host, printer.apiKey, query);
+    const status = await fetchJson(printer, query);
     states.set(printer.id, {
       connected: true,
       error: null,
@@ -525,7 +549,7 @@ async function ensureJobMeta(printer) {
   jobMeta.set(printer.id, { key, fetching: true });
   try {
     console.log(`[${printer.id}] Lade G-Code fuer Overlay-Meta: ${file.display_name || file.name}`);
-    const buf = await downloadFile(printer.host, printer.apiKey, download);
+    const buf = await downloadFile(printer.host, printerAuthHeaders(printer), download);
     const meta = parseFile(buf);
     jobMeta.set(printer.id, { key, meta });
     writeMetaCache(key, meta);
@@ -717,17 +741,26 @@ app.post('/api/printers/test', async (req, res) => {
       type: String(body.type || 'prusalink').toLowerCase(),
       host: String(body.host || '').replace(/^https?:\/\//, '').replace(/\/+$/, ''),
       apiKey: String(body.apiKey || ''),
+      username: String(body.username || ''),
+      password: String(body.password || ''),
       cameraUrl: String(body.cameraUrl || ''),
       wasteGramsPerChange: Number(body.wasteGramsPerChange || 0),
     };
+    const existing = config.printers.find((p) => p.id === printer.id);
     if (printer.apiKey === '__KEEP__') {
-      printer.apiKey = config.printers.find((p) => p.id === printer.id)?.apiKey || '';
+      printer.apiKey = existing?.apiKey || '';
+    }
+    if (printer.password === '__KEEP__') {
+      printer.password = existing?.password || '';
     }
     if (!['prusalink', 'octoprint', 'moonraker', 'demo'].includes(printer.type)) {
       throw new Error(`Unbekannter Druckertyp: ${printer.type}`);
     }
     if (printer.type !== 'demo' && !printer.host) throw new Error('Host/IP fehlt');
-    if (!['moonraker', 'demo'].includes(printer.type) && !printer.apiKey) throw new Error('API-Key fehlt');
+    if (printer.type === 'octoprint' && !printer.apiKey) throw new Error('API-Key fehlt');
+    if (printer.type === 'prusalink' && !printer.apiKey && !(printer.username && printer.password)) {
+      throw new Error('PrusaLink Benutzer/Passwort oder API-Key fehlt');
+    }
     states.set(printer.id, initialState(printer.type));
     const state = await testPrinter(printer);
     states.delete(printer.id);

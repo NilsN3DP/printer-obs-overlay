@@ -7,6 +7,7 @@ Filamentwechsel, Speed, Flow, Z-Höhe und Lüfterdrehzahlen.
 Features:
 - **Mehrere Drucker** über eine `config.json`
 - **Dashboard** (`http://<server>:4200/`): Online-Status, Fortschritt, Jobdatei, Kamera-Link und OBS-Link je Drucker
+- **Auswahl oben**: globaler aktiver Drucker plus getrennte Bereiche für Übersicht, Drucker-Setup, Overlay-Builder und Toolchanger-Analyse
 - **Web-Setup**: Drucker hinzufügen/bearbeiten/löschen, Config speichern und Verbindung testen
 - **Layout-Presets**: Bereiche, Layout, Akzentfarbe, Branding und Social-Auswahl als OBS-Link speichern
 - **Branding**: Name und sichtbare Social-Media-Seiten im Dashboard wählen
@@ -20,7 +21,7 @@ Features:
 
 ## 1. Druckerzugriff vorbereiten
 
-- PrusaLink: API-Key am Display unter **Settings > Network > PrusaLink** oder im PrusaLink-Webinterface.
+- PrusaLink: Benutzername und Passwort aus PrusaLink eintragen. Ein API-Key kann alternativ weiter genutzt werden.
 - OctoPrint: API-Key unter **Settings > Application Keys**.
 - Moonraker/Klipper: Host ist meist `<ip>:7125`; API-Key kann leer bleiben, wenn Moonraker lokal offen ist.
 
@@ -37,7 +38,7 @@ das Dashboard schreibt sie nach `/config/config.json`. Alternativ kannst du eine
 {
   "pollIntervalMs": 2000,
   "printers": [
-    { "id": "coreone", "name": "Core One INDX", "type": "prusalink", "host": "192.168.1.122", "apiKey": "DEIN_KEY", "cameraUrl": "" },
+    { "id": "coreone", "name": "Core One INDX", "type": "prusalink", "host": "192.168.1.122", "username": "maker", "password": "DEIN_PASSWORT", "cameraUrl": "" },
     { "id": "octo", "name": "OctoPrint", "type": "octoprint", "host": "192.168.1.140", "apiKey": "KEY_2", "cameraUrl": "" },
     { "id": "klipper", "name": "Klipper", "type": "moonraker", "host": "192.168.1.150:7125", "apiKey": "", "cameraUrl": "" }
   ]
@@ -45,7 +46,7 @@ das Dashboard schreibt sie nach `/config/config.json`. Alternativ kannst du eine
 ```
 
 `id` = interner Kurzname (frei wählbar, in der URL verwendet), `name` = Anzeigename, `type` = Adapter.
-API-Keys bleiben nur in dieser Config-Datei und werden im Dashboard nicht im Klartext zurückgegeben.
+API-Keys und Passwörter bleiben nur in dieser Config-Datei und werden im Dashboard nicht im Klartext zurückgegeben.
 
 ### b) Image bauen und starten
 
@@ -112,7 +113,7 @@ Das Branding-Handle kann im Dashboard gesetzt werden; es wird als URL-Parameter 
 
 ### PrusaLink
 
-Liefert die meisten Felder und kann G-Code-Metadaten cachen, wenn die laufende Datei per PrusaLink downloadbar ist. Erweiterte Felder wie Filamentfarbe, Werkzeug, Layer und Waste kommen entweder aus Custom-Firmware oder aus G-Code-Metadaten.
+Liefert die meisten Felder und kann G-Code-Metadaten cachen, wenn die laufende Datei per PrusaLink downloadbar ist. Für PrusaLink reicht Benutzername/Passwort; ein API-Key ist nur noch eine Alternative. Erweiterte Felder wie Filamentfarbe, Werkzeug, Layer und Waste kommen entweder aus Custom-Firmware oder aus G-Code-Metadaten.
 Der Standardweg fuer INDX/Toolchange-Prüfung ist der Upload im Dashboard: `.gcode` oder `.bgcode` hochladen und vor dem Stream prüfen, ob Toolchanges, Layer und Waste plausibel erkannt werden.
 
 ### OctoPrint
@@ -144,7 +145,7 @@ Ableitung aus G-Code/BGCode. INDX `M8600 S<n>` und normale `T<n>`-Toolwechsel we
 
 ## Fehlerbehebung
 
-- **"Offline" / "fetch failed"**: Drucker nicht erreichbar. Host/IP und API-Key in der
+- **"Offline" / "fetch failed"**: Drucker nicht erreichbar. Host/IP und PrusaLink-Zugang bzw. API-Key in der
   `config.json` (bzw. `.env`) prüfen; Drucker + Server im selben Netzwerk.
 - **HTTP 401**: API-Key falsch oder PrusaLink am Drucker deaktiviert.
 - **Konfigurator zeigt "Keine Drucker konfiguriert"**: `config.json` nicht gefunden/leer.
