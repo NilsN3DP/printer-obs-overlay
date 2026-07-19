@@ -1,6 +1,20 @@
 {
   "pollIntervalMs": 2000,
+  "demoMode": true,
   "wasteGramsPerChange": 0,
+  "theme": {
+    "accentColor": "#fa6831",
+    "brandText": "N3DP_de",
+    "logoUrl": ""
+  },
+  "presets": [
+    {
+      "id": "stream-footer",
+      "name": "Stream Footer",
+      "layout": "bar",
+      "sections": ["frame", "brand", "printerName", "status", "file", "progress", "time", "nozzle", "bed", "filament", "changes", "tool", "waste", "layer"]
+    }
+  ],
   "printers": [
     {
       "id": "coreone",
@@ -8,6 +22,7 @@
       "type": "prusalink",
       "host": "192.168.1.122",
       "apiKey": "DEIN_API_KEY_HIER",
+      "cameraUrl": "http://192.168.1.122/camera/snapshot",
       "wasteGramsPerChange": 0.022
     },
     {
@@ -22,14 +37,16 @@
       "name": "OctoPrint Drucker",
       "type": "octoprint",
       "host": "192.168.1.140",
-      "apiKey": "OCTOPRINT_API_KEY"
+      "apiKey": "OCTOPRINT_API_KEY",
+      "cameraUrl": "http://192.168.1.140/webcam/?action=stream"
     },
     {
       "id": "klipper",
       "name": "Klipper Drucker",
       "type": "moonraker",
       "host": "192.168.1.150:7125",
-      "apiKey": ""
+      "apiKey": "",
+      "cameraUrl": "http://192.168.1.150/webcam/?action=stream"
     }
   ]
 }

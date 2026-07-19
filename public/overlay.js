@@ -7,6 +7,8 @@ const ALL_SECTIONS = [
 const params = new URLSearchParams(window.location.search);
 const printerId = params.get('printer') || '';
 const layout = params.get('layout') === 'card' ? 'card' : 'bar';
+const accent = params.get('accent');
+const brand = params.get('brand');
 
 // sections param: comma list. Absent -> show all.
 const sectionsParam = params.get('sections');
@@ -18,6 +20,22 @@ const POLL_MS = Number(params.get('poll')) || 2000;
 const STATUS_URL = `/api/status${printerId ? `?printer=${encodeURIComponent(printerId)}` : ''}`;
 
 document.body.classList.add(`layout-${layout}`);
+if (accent && /^#[0-9a-fA-F]{6}$/.test(accent)) {
+  document.documentElement.style.setProperty('--accent', accent);
+}
+if (brand) {
+  const handle = document.querySelector('.handle');
+  const decoded = brand.slice(0, 32);
+  const split = decoded.includes('_') ? decoded.split('_') : [decoded, ''];
+  handle.innerHTML = '';
+  handle.appendChild(document.createTextNode(split[0]));
+  if (split[1]) {
+    const accentSpan = document.createElement('span');
+    accentSpan.className = 'handle-accent';
+    accentSpan.textContent = `_${split.slice(1).join('_')}`;
+    handle.appendChild(accentSpan);
+  }
+}
 
 // Hide sections that are not requested.
 function applySections() {

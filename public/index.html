@@ -12,7 +12,7 @@
 <body>
   <header class="top">
     <h1>Printer OBS Overlay <span class="accent">Dashboard</span></h1>
-    <p class="sub">Druckerstatus prüfen, OBS-Links bauen und mehrere Druckertypen zentral verwalten.</p>
+    <p class="sub">Drucker verwalten, OBS-Links bauen, INDX-Toolchanges aus Dateien auswerten.</p>
   </header>
 
   <main class="page">
@@ -30,51 +30,134 @@
       </div>
     </section>
 
-    <section class="grid">
-    <section class="panel">
-      <label class="field">
-        <span class="field-label">Drucker</span>
-        <select id="printerSelect"></select>
-      </label>
-
-      <div class="field">
-        <span class="field-label">Layout</span>
-        <div class="segmented" id="layoutGroup">
-          <label><input type="radio" name="layout" value="bar" checked /> Leiste (unten)</label>
-          <label><input type="radio" name="layout" value="card" /> Karte (frei platzierbar)</label>
+    <section class="dashboard-grid">
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <span class="field-label">Setup</span>
+            <h2>Drucker</h2>
+          </div>
+          <button type="button" id="addPrinterBtn" class="mini">Hinzufügen</button>
         </div>
-      </div>
+        <label class="toggle-row">
+          <input type="checkbox" id="demoMode" />
+          <span>Demo-Drucker anzeigen</span>
+        </label>
+        <div id="printerEditor" class="editor-list"></div>
+        <div class="form-actions">
+          <button type="button" id="saveConfigBtn" class="copy">Config speichern</button>
+          <span id="saveStatus" class="save-status"></span>
+        </div>
+      </section>
 
-      <div class="field">
-        <div class="field-label-row">
-          <span class="field-label">Bereiche</span>
-          <div class="mini-actions">
-            <button type="button" id="selectAll" class="mini">Alle</button>
-            <button type="button" id="selectNone" class="mini">Keine</button>
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <span class="field-label">INDX / G-Code</span>
+            <h2>Datei-Analyse</h2>
           </div>
         </div>
-        <div id="sectionList" class="sections"></div>
-      </div>
+        <form id="uploadForm" class="upload-box">
+          <input type="file" id="gcodeFile" name="file" accept=".gcode,.bgcode,.gco,.gc" />
+          <button type="submit" class="copy">Analysieren</button>
+        </form>
+        <p class="hint">Standardweg: Datei hochladen. CFW-Felder werden im Overlay weiterhin bevorzugt, wenn sie vorhanden sind.</p>
+        <div id="uploadResult" class="analysis-result">Noch keine Datei analysiert.</div>
+      </section>
     </section>
 
-    <section class="panel">
-      <span class="field-label">Overlay-URL für OBS</span>
-      <div class="url-row">
-        <input type="text" id="urlOut" readonly />
-        <button type="button" id="copyBtn" class="copy">Kopieren</button>
-      </div>
-      <p class="hint">Breite/Höhe der Browser-Quelle = deine Canvas-Auflösung (z. B. 1920 × 1080).
-        Bei „Karte“ reicht auch ein kleinerer Bereich.</p>
+    <section class="grid">
+      <section class="panel">
+        <label class="field">
+          <span class="field-label">Drucker</span>
+          <select id="printerSelect"></select>
+        </label>
 
-      <span class="field-label preview-label">Live-Vorschau</span>
-      <div class="preview-wrap">
-        <div class="preview-canvas">
-          <iframe id="previewFrame" title="Overlay-Vorschau"></iframe>
+        <div class="field">
+          <span class="field-label">Layout</span>
+          <div class="segmented" id="layoutGroup">
+            <label><input type="radio" name="layout" value="bar" checked /> Leiste unten</label>
+            <label><input type="radio" name="layout" value="card" /> Karte frei platzierbar</label>
+          </div>
         </div>
-      </div>
-    </section>
+
+        <div class="field two-cols">
+          <label>
+            <span class="field-label">Akzentfarbe</span>
+            <input type="color" id="accentColor" value="#fa6831" />
+          </label>
+          <label>
+            <span class="field-label">Branding</span>
+            <input type="text" id="brandText" maxlength="32" value="N3DP_de" />
+          </label>
+        </div>
+
+        <div class="field">
+          <div class="field-label-row">
+            <span class="field-label">Bereiche</span>
+            <div class="mini-actions">
+              <button type="button" id="selectAll" class="mini">Alle</button>
+              <button type="button" id="selectNone" class="mini">Keine</button>
+            </div>
+          </div>
+          <div id="sectionList" class="sections"></div>
+        </div>
+
+        <div class="field">
+          <div class="field-label-row">
+            <span class="field-label">Presets</span>
+            <button type="button" id="savePresetBtn" class="mini">Preset speichern</button>
+          </div>
+          <div class="preset-row">
+            <select id="presetSelect"></select>
+            <input type="text" id="presetName" placeholder="Preset-Name" />
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <span class="field-label">Overlay-URL für OBS</span>
+        <div class="url-row">
+          <input type="text" id="urlOut" readonly />
+          <button type="button" id="copyBtn" class="copy">Kopieren</button>
+        </div>
+        <p class="hint">Breite/Höhe der Browser-Quelle = Canvas-Auflösung. Bei Karte reicht auch ein kleinerer Bereich.</p>
+
+        <span class="field-label preview-label">Live-Vorschau</span>
+        <div class="preview-wrap">
+          <div class="preview-canvas">
+            <iframe id="previewFrame" title="Overlay-Vorschau"></iframe>
+          </div>
+        </div>
+      </section>
     </section>
   </main>
+
+  <template id="printerTemplate">
+    <article class="printer-form">
+      <div class="printer-form-head">
+        <strong data-title>Drucker</strong>
+        <div class="mini-actions">
+          <button type="button" class="mini" data-test>Test</button>
+          <button type="button" class="mini danger" data-remove>Entfernen</button>
+        </div>
+      </div>
+      <div class="form-grid">
+        <label><span class="field-label">ID</span><input data-field="id" /></label>
+        <label><span class="field-label">Name</span><input data-field="name" /></label>
+        <label><span class="field-label">Typ</span><select data-field="type">
+          <option value="prusalink">PrusaLink</option>
+          <option value="octoprint">OctoPrint</option>
+          <option value="moonraker">Moonraker</option>
+        </select></label>
+        <label><span class="field-label">Host/IP</span><input data-field="host" placeholder="192.168.1.122" /></label>
+        <label><span class="field-label">API-Key</span><input data-field="apiKey" type="password" placeholder="Leer lassen = behalten" /></label>
+        <label><span class="field-label">Kamera-URL</span><input data-field="cameraUrl" placeholder="http://.../snapshot.jpg" /></label>
+        <label><span class="field-label">Waste g/Wechsel</span><input data-field="wasteGramsPerChange" type="number" step="0.001" /></label>
+      </div>
+      <div class="test-result" data-result></div>
+    </article>
+  </template>
 
   <script src="builder.js"></script>
 </body>

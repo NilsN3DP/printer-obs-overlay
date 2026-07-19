@@ -6,10 +6,12 @@ Filamentwechsel, Speed, Flow, Z-Höhe und Lüfterdrehzahlen.
 
 Features:
 - **Mehrere Drucker** über eine `config.json`
-- **Dashboard** (`http://<server>:4200/`): Online-Status, Fortschritt, Jobdatei und OBS-Link je Drucker
-- **Konfigurator-Oberfläche**: Drucker wählen, einzelne Bereiche
-  an-/abwählen, Live-Vorschau, fertige OBS-URL zum Kopieren
+- **Dashboard** (`http://<server>:4200/`): Online-Status, Fortschritt, Jobdatei, Kamera-Link und OBS-Link je Drucker
+- **Web-Setup**: Drucker hinzufügen/bearbeiten/löschen, Config speichern und Verbindung testen
+- **Layout-Presets**: Bereiche, Layout, Akzentfarbe und Branding als OBS-Link speichern
+- **INDX/G-Code-Analyse**: `.gcode` und `.bgcode` hochladen, Toolchanges, Layer, Waste und erste Tool-Events prüfen
 - **Adapter**: `prusalink`, `octoprint`, `moonraker`
+- **Demo-Modus** ohne echten Drucker
 - Zwei Layouts: **Leiste** (vollflächige Fußzeile + Rahmen) oder **Karte** (frei platzierbar)
 - Läuft als **Docker-Container** (z. B. auf Unraid) oder lokal mit Node.js
 
@@ -24,21 +26,23 @@ Features:
 ### a) Konfiguration anlegen
 
 Lege auf dem Unraid-Server einen Ordner an, z. B.
-`/mnt/user/appdata/printer-obs-overlay/`, und darin eine `config.json`
-(Vorlage: `config.example.json`):
+`/mnt/user/appdata/printer-obs-overlay/`. Beim ersten Start kann die Config leer sein;
+das Dashboard schreibt sie nach `/config/config.json`. Alternativ kannst du eine
+`config.json` vorab anlegen (Vorlage: `config.example.json`):
 
 ```json
 {
   "pollIntervalMs": 2000,
   "printers": [
-    { "id": "coreone", "name": "Core One INDX", "type": "prusalink", "host": "192.168.1.122", "apiKey": "DEIN_KEY" },
-    { "id": "octo", "name": "OctoPrint", "type": "octoprint", "host": "192.168.1.140", "apiKey": "KEY_2" },
-    { "id": "klipper", "name": "Klipper", "type": "moonraker", "host": "192.168.1.150:7125", "apiKey": "" }
+    { "id": "coreone", "name": "Core One INDX", "type": "prusalink", "host": "192.168.1.122", "apiKey": "DEIN_KEY", "cameraUrl": "" },
+    { "id": "octo", "name": "OctoPrint", "type": "octoprint", "host": "192.168.1.140", "apiKey": "KEY_2", "cameraUrl": "" },
+    { "id": "klipper", "name": "Klipper", "type": "moonraker", "host": "192.168.1.150:7125", "apiKey": "", "cameraUrl": "" }
   ]
 }
 ```
 
 `id` = interner Kurzname (frei wählbar, in der URL verwendet), `name` = Anzeigename, `type` = Adapter.
+API-Keys bleiben nur in dieser Config-Datei und werden im Dashboard nicht im Klartext zurückgegeben.
 
 ### b) Image bauen und starten
 
@@ -59,7 +63,8 @@ veröffentlicht Port `4200`.
 
 ### c) Öffnen
 
-`http://<unraid-ip>:4200/` -> Dashboard und Konfigurator. Drucker + Bereiche wählen, URL kopieren.
+`http://<unraid-ip>:4200/` -> Dashboard. Dort kannst du Drucker anlegen, testen, Presets speichern,
+G-Code/INDX-Dateien analysieren und die fertigen OBS-URLs kopieren.
 
 ## 3. Lokal ohne Docker (Alternative)
 
@@ -90,18 +95,21 @@ Hintergrund ist transparent; nur die gewählten Bereiche werden gezeichnet.
 | `printer`  | `?printer=coreone`                | Drucker-`id` aus der config.json (Standard: erster) |
 | `sections` | `&sections=progress,nozzle,bed`   | Nur diese Bereiche zeigen (fehlt = alle) |
 | `layout`   | `&layout=card`                    | `bar` (Standard) oder `card` |
+| `accent`   | `&accent=%23ffaa00`               | Akzentfarbe als URL-codiertes Hex |
+| `brand`    | `&brand=N3DP_de`                  | Branding-Text |
 | `poll`     | `&poll=2000`                      | Abfrageintervall im Browser (ms) |
 
 Verfügbare Bereiche: `frame`, `brand`, `printerName`, `status`, `file`, `progress`, `time`,
 `nozzle`, `bed`, `filament`, `changes`, `tool`, `waste`, `layer`, `speed`, `flow`, `z`, `fanHotend`, `fanPrint`.
 
-Das Branding-Handle (`N3DP_de`) steht in `public/overlay.html`.
+Das Branding-Handle kann im Dashboard gesetzt werden; es wird als URL-Parameter an OBS übergeben.
 
 ## Adapter-Hinweise
 
 ### PrusaLink
 
 Liefert die meisten Felder und kann G-Code-Metadaten cachen, wenn die laufende Datei per PrusaLink downloadbar ist. Erweiterte Felder wie Filamentfarbe, Werkzeug, Layer und Waste kommen entweder aus Custom-Firmware oder aus G-Code-Metadaten.
+Der Standardweg fuer INDX/Toolchange-Prüfung ist der Upload im Dashboard: `.gcode` oder `.bgcode` hochladen und vor dem Stream prüfen, ob Toolchanges, Layer und Waste plausibel erkannt werden.
 
 ### OctoPrint
 
@@ -111,24 +119,24 @@ Liefert Basisdaten wie State, Fortschritt, Dateiname, Nozzle/Bed und Zeiten. Spe
 
 Liefert Basisdaten aus `printer/objects/query`. Ohne zusätzliche Klipper/Moonraker-Objekte bleiben Spezialfelder leer.
 
-## Filament-Infos & Wechsel bei PrusaLink Custom-Firmware
+## Filament-Infos, INDX & Wechsel
 
-Die Boxen "Filament" (Material + Farbpunkt) und "Changes" (Filamentwechsel) benötigen die
-Custom-Firmware (Repo `New project/buddy-sparse`, v6.6.1-Basis). Dort liefert die PrusaLink-API
-(`/api/v1/status` -> `printer`) zusätzlich:
+Das Overlay bevorzugt Live-Felder aus Custom-Firmware, wenn sie vorhanden sind. Ohne CFW nutzt
+PrusaLink den Dateiweg: laufende Datei downloaden oder Datei im Dashboard hochladen und daraus
+Toolchanges, Layer, Material/Farben und Waste ableiten.
+
+Optionale Custom-Firmware-Felder in der PrusaLink-API (`/api/v1/status` -> `printer`):
 
 - `material` - geladener Filamenttyp (z. B. "PLA")
 - `filament_color` - zuletzt geladene Farbe als Hex (z. B. "#00AFC7")
 - `filament_changes` - abgeschlossene M600-Wechsel seit Druckstart
 - `filament_changes_total` - geplante Gesamtzahl (aus Slicer-Metadatum `total toolchanges`);
   das Overlay zeigt dann `x / gesamt`
+- `tool` / `tools_total` - aktives Werkzeug für INDX/MMU/Toolchanger
+- `waste_fill` / `waste_capacity` - live Wastebin, falls Firmware das liefert
 
-Mit Original-Firmware fehlen diese Felder; das Overlay zeigt "–".
-
-## INDX-Werkzeugwechsler (Core One+)
-
-Die Anzeige "aktives Werkzeug X/8" ist noch offen - kommt mit den eigenen INDX-Firmware-
-Anpassungen (v6.6.1 hat die nötige `VirtualToolIndex`-Basis bereits).
+Mit Original-Firmware fehlen diese Live-Felder; bei PrusaLink versucht das Overlay dann die
+Ableitung aus G-Code/BGCode. INDX `M8600 S<n>` und normale `T<n>`-Toolwechsel werden erkannt.
 
 ## Fehlerbehebung
 
@@ -137,4 +145,6 @@ Anpassungen (v6.6.1 hat die nötige `VirtualToolIndex`-Basis bereits).
 - **HTTP 401**: API-Key falsch oder PrusaLink am Drucker deaktiviert.
 - **Konfigurator zeigt "Keine Drucker konfiguriert"**: `config.json` nicht gefunden/leer.
   Bei Docker prüfen, dass das Volume auf `/config` zeigt und `config.json` dort liegt.
-- **Werte ändern sich nicht**: Container/Server nach Config-Änderung neu starten.
+- **Werte ändern sich nicht**: Dashboard aktualisieren. Nach manuellem Editieren der Config den Container/Server neu starten.
+- **INDX zeigt keine Toolchanges**: Datei im Dashboard hochladen. Wenn dort keine Events erkannt werden,
+  enthält die Datei vermutlich keine `M8600 S<n>`- oder `T<n>`-Events oder sie sind anders codiert.

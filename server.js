@@ -3,18 +3,22 @@ import express from 'express';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import multer from 'multer';
 import { downloadFile, parseFile, computeLive } from './gcode-meta.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const PORT = Number(process.env.PORT || 4200);
 
-/**
- * Config priority:
- *   1. CONFIG_PATH env -> JSON file (Unraid: mount /config/config.json)
- *   2. ./config.json next to this file
- *   3. Single printer from env vars PRUSA_HOST / PRUSA_API_KEY (backward compatible)
- */
+const CONFIG_CANDIDATES = [
+  ...(process.env.CONFIG_PATH ? [process.env.CONFIG_PATH] : []),
+  path.join(__dirname, 'config.json'),
+];
+
+function writableConfigFile() {
+  return process.env.CONFIG_PATH || path.join(__dirname, 'config.json');
+}
+
 function loadConfig() {
   const candidates = [];
   if (process.env.CONFIG_PATH) {
@@ -28,7 +32,7 @@ function loadConfig() {
         const parsed = JSON.parse(fs.readFileSync(file, 'utf8'));
         if (Array.isArray(parsed.printers) && parsed.printers.length > 0) {
           console.log(`Konfiguration geladen: ${file} (${parsed.printers.length} Drucker)`);
-          return normalizeConfig(parsed);
+          return { config: normalizeConfig(parsed), source: file, raw: parsed };
         }
         console.warn(`Konfig ${file} enthaelt keine Drucker, ueberspringe.`);
       }
@@ -40,7 +44,7 @@ function loadConfig() {
   // Fallback: single printer from env
   if (process.env.PRUSA_HOST && process.env.PRUSA_API_KEY) {
     console.log('Kein config.json gefunden, nutze einzelnen Drucker aus .env');
-    return normalizeConfig({
+    const raw = {
       pollIntervalMs: Number(process.env.POLL_INTERVAL_MS || 2000),
       printers: [
         {
@@ -50,14 +54,16 @@ function loadConfig() {
           apiKey: process.env.PRUSA_API_KEY,
         },
       ],
-    });
+    };
+    return { config: normalizeConfig(raw), source: null, raw };
   }
 
   console.warn(
     '\nKeine Drucker konfiguriert. Lege eine config.json an (siehe config.example.json) ' +
       'oder setze PRUSA_HOST und PRUSA_API_KEY.\n'
   );
-  return { pollIntervalMs: 2000, printers: [] };
+  const raw = { pollIntervalMs: 2000, demoMode: true, printers: [] };
+  return { config: normalizeConfig(raw), source: null, raw };
 }
 
 function normalizeConfig(cfg) {
@@ -72,17 +78,18 @@ function normalizeConfig(cfg) {
         type: String(p.type || p.provider || cfg.type || 'prusalink').toLowerCase(),
         host: String(p.host || '').replace(/^https?:\/\//, '').replace(/\/+$/, ''),
         apiKey: String(p.apiKey || p.api_key || ''),
+        cameraUrl: String(p.cameraUrl || ''),
         // g pro Toolwechsel fuer die Waste-Schaetzung, wenn der Slicer keine
         // Wipe-/Purge-Gramm mitschreibt (0 = Fallback aus)
         wasteGramsPerChange: Number(p.wasteGramsPerChange ?? cfg.wasteGramsPerChange ?? 0) || 0,
       };
     })
     .filter((p) => {
-      if (!p.host || (p.type !== 'moonraker' && !p.apiKey)) {
+      if (p.type !== 'demo' && (!p.host || (p.type !== 'moonraker' && !p.apiKey))) {
         console.warn(`Drucker "${p.id}" ohne host/apiKey, ignoriert.`);
         return false;
       }
-      if (!['prusalink', 'octoprint', 'moonraker'].includes(p.type)) {
+      if (!['prusalink', 'octoprint', 'moonraker', 'demo'].includes(p.type)) {
         console.warn(`Drucker "${p.id}" mit unbekanntem Typ "${p.type}", ignoriert.`);
         return false;
       }
@@ -93,22 +100,125 @@ function normalizeConfig(cfg) {
       seen.add(p.id);
       return true;
     });
-  return { pollIntervalMs, printers };
+  if (cfg.demoMode && !printers.some((p) => p.id === 'demo')) {
+    printers.push({
+      id: 'demo',
+      name: 'Demo Drucker',
+      type: 'demo',
+      host: '',
+      apiKey: '',
+      cameraUrl: '',
+      wasteGramsPerChange: 0.022,
+    });
+  }
+  return {
+    pollIntervalMs,
+    demoMode: Boolean(cfg.demoMode),
+    theme: normalizeTheme(cfg.theme),
+    presets: normalizePresets(cfg.presets),
+    printers,
+  };
 }
 
-const config = loadConfig();
+function normalizeTheme(theme = {}) {
+  return {
+    accentColor: String(theme.accentColor || '#fa6831'),
+    brandText: String(theme.brandText || 'N3DP_de'),
+    logoUrl: String(theme.logoUrl || ''),
+  };
+}
+
+function normalizePresets(presets = []) {
+  return Array.isArray(presets)
+    ? presets.map((p, i) => ({
+      id: String(p.id || `preset${i + 1}`).replace(/[^a-zA-Z0-9_-]/g, '').toLowerCase(),
+      name: String(p.name || `Preset ${i + 1}`),
+      layout: p.layout === 'card' ? 'card' : 'bar',
+      sections: Array.isArray(p.sections) ? p.sections.map(String) : [],
+    })).filter((p) => p.id && p.sections.length > 0)
+    : [];
+}
+
+function publicConfig() {
+  return {
+    source: configSource,
+    writablePath: writableConfigFile(),
+    pollIntervalMs: config.pollIntervalMs,
+    demoMode: config.demoMode,
+    theme: config.theme,
+    presets: config.presets,
+    printers: config.printers.map((p) => ({
+      id: p.id,
+      name: p.name,
+      type: p.type,
+      host: p.host,
+      apiKeySet: Boolean(p.apiKey),
+      cameraUrl: p.cameraUrl || '',
+      wasteGramsPerChange: p.wasteGramsPerChange,
+    })),
+  };
+}
+
+function persistConfig(nextPublic) {
+  const currentById = new Map(config.printers.map((p) => [p.id, p]));
+  const raw = {
+    pollIntervalMs: Number(nextPublic.pollIntervalMs || config.pollIntervalMs || 2000),
+    demoMode: Boolean(nextPublic.demoMode),
+    theme: normalizeTheme(nextPublic.theme),
+    presets: normalizePresets(nextPublic.presets),
+    printers: (nextPublic.printers || [])
+      .filter((p) => p.type !== 'demo')
+      .map((p, i) => {
+        const id = String(p.id || `printer${i + 1}`).trim();
+        const existing = currentById.get(id);
+        const apiKey = p.apiKey && p.apiKey !== '__KEEP__' ? String(p.apiKey) : existing?.apiKey || '';
+        return {
+          id,
+          name: String(p.name || id),
+          type: String(p.type || 'prusalink').toLowerCase(),
+          host: String(p.host || '').replace(/^https?:\/\//, '').replace(/\/+$/, ''),
+          apiKey,
+          cameraUrl: String(p.cameraUrl || ''),
+          wasteGramsPerChange: Number(p.wasteGramsPerChange || 0),
+        };
+      }),
+  };
+  const normalized = normalizeConfig(raw);
+  fs.mkdirSync(path.dirname(writableConfigFile()), { recursive: true });
+  fs.writeFileSync(writableConfigFile(), `${JSON.stringify(raw, null, 2)}\n`);
+  config = normalized;
+  configSource = writableConfigFile();
+  reconcileStates();
+  return publicConfig();
+}
+
+let loaded = loadConfig();
+let config = loaded.config;
+let configSource = loaded.source;
 
 // Live state per printer id
 const states = new Map();
-for (const printer of config.printers) {
-  states.set(printer.id, {
+function initialState(type) {
+  return {
     connected: false,
+    type,
     error: 'Noch keine Daten vom Drucker erhalten',
     updatedAt: null,
     printer: null,
     job: null,
-  });
+  };
 }
+
+function reconcileStates() {
+  const ids = new Set(config.printers.map((p) => p.id));
+  for (const id of [...states.keys()]) {
+    if (!ids.has(id)) states.delete(id);
+  }
+  for (const printer of config.printers) {
+    if (!states.has(printer.id)) states.set(printer.id, initialState(printer.type));
+  }
+}
+reconcileStates();
 
 async function fetchJson(host, apiKey, pathname, headers = {}) {
   const res = await fetch(`http://${host}${pathname}`, {
@@ -246,7 +356,48 @@ async function pollMoonraker(printer) {
   }
 }
 
+async function pollDemo(printer) {
+  const seconds = Math.floor(Date.now() / 1000);
+  const progress = (seconds % 600) / 6;
+  const tool = Math.floor(progress / 20) % 5;
+  states.set(printer.id, {
+    connected: true,
+    error: null,
+    updatedAt: new Date().toISOString(),
+    type: printer.type,
+    printer: {
+      state: 'PRINTING',
+      temp_nozzle: 214 + Math.sin(seconds / 8) * 2,
+      target_nozzle: 215,
+      temp_bed: 59 + Math.sin(seconds / 11),
+      target_bed: 60,
+      material: ['PLA', 'PETG', 'ASA', 'TPU', 'PLA'][tool],
+      filament_color: ['#fa6831', '#3bb273', '#4b8cff', '#f6c945', '#ffffff'][tool],
+      filament_changes: Math.floor(progress / 4),
+      filament_changes_total: 124,
+      tool: tool + 1,
+      tools_total: 5,
+      layer: Math.floor(progress * 3),
+      layer_total: 300,
+      waste_g: Math.round(progress * 0.31 * 10) / 10,
+      waste_total_g: 31,
+      speed: 100,
+      flow: 95,
+      axis_z: progress * 1.8,
+      fan_hotend: 8200,
+      fan_print: 55,
+    },
+    job: {
+      file: { display_name: 'demo-indx-toolchange.bgcode' },
+      progress,
+      time_printing: seconds % 600,
+      time_remaining: 600 - (seconds % 600),
+    },
+  });
+}
+
 async function pollPrinter(printer) {
+  if (printer.type === 'demo') return pollDemo(printer);
   if (printer.type === 'octoprint') return pollOctoPrint(printer);
   if (printer.type === 'moonraker') return pollMoonraker(printer);
   return pollPrusaLink(printer);
@@ -351,7 +502,55 @@ pollAll();
 setInterval(pollAll, config.pollIntervalMs);
 
 const app = express();
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: Number(process.env.UPLOAD_LIMIT_BYTES || 250 * 1024 * 1024) },
+});
+
+app.use(express.json({ limit: '2mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
+
+function summarizeMeta(meta, fileName = 'upload') {
+  const tools = new Map();
+  for (const event of meta.toolEvents || []) {
+    tools.set(event.tool, (tools.get(event.tool) || 0) + 1);
+  }
+  const firstEvents = (meta.toolEvents || []).slice(0, 20).map((e) => ({
+    tool: e.tool + 1,
+    progress: Math.round((e.pe ?? e.p ?? 0) * 100) / 100,
+  }));
+  const grams = (value) => {
+    if (value == null) return null;
+    const factor = Math.abs(value) < 1 ? 100 : 10;
+    return Math.round(value * factor) / factor;
+  };
+  return {
+    fileName,
+    toolsTotal: meta.toolsTotal || tools.size || null,
+    changesTotal: meta.changesTotal || 0,
+    layerTotal: meta.layerTotal || 0,
+    wasteTotalG: grams(meta.wasteTotalG),
+    totalUsedG: grams(meta.totalUsedG),
+    materials: meta.materials || [],
+    colors: meta.colors || [],
+    toolUseCounts: [...tools.entries()].map(([tool0, count]) => ({ tool: tool0 + 1, count })),
+    firstEvents,
+    detectedIndx: (meta.toolEvents || []).length > 0 && /M8600|filament_multitool/i.test(JSON.stringify(meta.config || {})),
+  };
+}
+
+async function testPrinter(printer) {
+  if (printer.type === 'demo') {
+    await pollDemo(printer);
+  } else if (printer.type === 'octoprint') {
+    await pollOctoPrint(printer);
+  } else if (printer.type === 'moonraker') {
+    await pollMoonraker(printer);
+  } else {
+    await pollPrusaLink(printer);
+  }
+  return states.get(printer.id);
+}
 
 app.get('/api/health', (req, res) => {
   const printers = config.printers.map((p) => {
@@ -361,6 +560,7 @@ app.get('/api/health', (req, res) => {
       name: p.name,
       type: p.type,
       host: p.host,
+      cameraUrl: p.cameraUrl || '',
       connected: Boolean(state?.connected),
       state: state?.printer?.state || null,
       file: state?.job?.file?.display_name || state?.job?.file?.name || null,
@@ -373,13 +573,77 @@ app.get('/api/health', (req, res) => {
     ok: true,
     version: process.env.npm_package_version || '1.0.0',
     pollIntervalMs: config.pollIntervalMs,
+    demoMode: config.demoMode,
     printers,
   });
 });
 
+app.get('/api/config', (req, res) => {
+  res.json(publicConfig());
+});
+
+app.put('/api/config', (req, res) => {
+  try {
+    res.json(persistConfig(req.body || {}));
+    pollAll();
+  } catch (err) {
+    res.status(400).json({ ok: false, error: err.message });
+  }
+});
+
+app.post('/api/printers/test', async (req, res) => {
+  try {
+    const body = req.body || {};
+    const printer = {
+      id: String(body.id || 'test'),
+      name: String(body.name || body.id || 'Test'),
+      type: String(body.type || 'prusalink').toLowerCase(),
+      host: String(body.host || '').replace(/^https?:\/\//, '').replace(/\/+$/, ''),
+      apiKey: String(body.apiKey || ''),
+      cameraUrl: String(body.cameraUrl || ''),
+      wasteGramsPerChange: Number(body.wasteGramsPerChange || 0),
+    };
+    if (printer.apiKey === '__KEEP__') {
+      printer.apiKey = config.printers.find((p) => p.id === printer.id)?.apiKey || '';
+    }
+    if (!['prusalink', 'octoprint', 'moonraker', 'demo'].includes(printer.type)) {
+      throw new Error(`Unbekannter Druckertyp: ${printer.type}`);
+    }
+    if (printer.type !== 'demo' && !printer.host) throw new Error('Host/IP fehlt');
+    if (!['moonraker', 'demo'].includes(printer.type) && !printer.apiKey) throw new Error('API-Key fehlt');
+    states.set(printer.id, initialState(printer.type));
+    const state = await testPrinter(printer);
+    states.delete(printer.id);
+    res.json({
+      ok: Boolean(state?.connected),
+      connected: Boolean(state?.connected),
+      state: state?.printer?.state || null,
+      file: state?.job?.file?.display_name || state?.job?.file?.name || null,
+      error: state?.error || null,
+    });
+  } catch (err) {
+    res.status(400).json({ ok: false, connected: false, error: err.message });
+  }
+});
+
+app.post('/api/analyze-upload', upload.single('file'), (req, res) => {
+  try {
+    if (!req.file?.buffer) throw new Error('Keine Datei empfangen');
+    const meta = parseFile(req.file.buffer);
+    res.json({ ok: true, ...summarizeMeta(meta, req.file.originalname) });
+  } catch (err) {
+    res.status(400).json({ ok: false, error: err.message });
+  }
+});
+
 // List configured printers (id + name only, never the API key)
 app.get('/api/printers', (req, res) => {
-  res.json(config.printers.map((p) => ({ id: p.id, name: p.name, type: p.type })));
+  res.json(config.printers.map((p) => ({
+    id: p.id,
+    name: p.name,
+    type: p.type,
+    cameraUrl: p.cameraUrl || '',
+  })));
 });
 
 // Status for one printer (defaults to the first configured printer)
@@ -393,7 +657,7 @@ app.get('/api/status', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Prusa OBS Overlay Server laeuft auf http://localhost:${PORT}`);
+  console.log(`Printer OBS Overlay Server laeuft auf http://localhost:${PORT}`);
   console.log(`Konfig-Oberflaeche:  http://localhost:${PORT}/`);
   console.log(`Overlay (direkt):    http://localhost:${PORT}/overlay.html`);
   if (config.printers.length) {
