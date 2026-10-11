@@ -1,0 +1,65 @@
+name: Windows release
+
+# Baut Windows-App, OBS-Plugin und Installer. Bei einem Tag (v2.0.0) entsteht ein GitHub-Release.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    env:
+      OBS_VERSION: 32.1.2
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - run: npm ci
+      - run: npm test
+
+      - name: Windows-Exe
+        run: npm run build:exe
+
+      # Das Plugin braucht obs.dll / obs-frontend-api.dll zum Erzeugen der Import-Bibliotheken.
+      - name: OBS Studio (nur fuer den Build)
+        shell: pwsh
+        run: |
+          $zip = "$env:RUNNER_TEMP\obs.zip"
+          Invoke-WebRequest "https://github.com/obsproject/obs-studio/releases/download/$env:OBS_VERSION/OBS-Studio-$env:OBS_VERSION-Windows-x64.zip" -OutFile $zip
+          Expand-Archive $zip "$env:RUNNER_TEMP\obs"
+
+      - name: OBS-Plugin
+        shell: pwsh
+        run: ./packaging/obs-plugin/build.ps1 -ObsDir "$env:RUNNER_TEMP\obs" -ObsTag $env:OBS_VERSION
+
+      - name: Installer
+        shell: pwsh
+        run: |
+          choco install innosetup -y --no-progress
+          npm run build:installer
+
+      - name: Plugin-Zip
+        shell: pwsh
+        run: Compress-Archive dist/obs-plugin/printer-overlay "dist/printer-overlay-obs-plugin-${{ github.ref_name }}.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: |
+            dist/*.exe
+            dist/*.zip
+
+      - if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/PrinterOBSOverlay-Setup-*.exe
+            dist/printer-overlay.exe
+            dist/*.zip

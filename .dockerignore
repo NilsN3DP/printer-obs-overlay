@@ -1,9 +1,4 @@
-node_modules
-.git
-.env
-.claude
-config
-config.json
-*.md
-scratchpad
-start-overlay.bat
+*
+!package.json
+!src/
+!packaging/docker/entrypoint.sh

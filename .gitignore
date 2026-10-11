@@ -1,8 +1,18 @@
 node_modules/
 npm-debug.log*
+/dist/
+/data/
+
+# Lokale Konfiguration mit Drucker-Zugangsdaten – niemals einchecken
 .env
 .env.local
-.claude/
 config/config.json
 config/meta-cache/
+*.broken-*
+
+# OBS-Plugin-Build
+packaging/obs-plugin/.deps/
+packaging/obs-plugin/build/
+
+.claude/
 nul

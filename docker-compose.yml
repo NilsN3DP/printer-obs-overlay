@@ -1,18 +1,20 @@
+# Start: docker compose up -d   ->   Dashboard unter http://<server-ip>:4200
 services:
   printer-obs-overlay:
-    build: .
-    # Or use a prebuilt image after `docker build -t printer-obs-overlay .`:
-    # image: ghcr.io/nilsn3dp/printer-obs-overlay:latest
+    image: ghcr.io/nilsn3dp/printer-obs-overlay:latest
+    # Selbst bauen statt herunterladen: die naechste Zeile einkommentieren
+    # build: .
     container_name: printer-obs-overlay
     restart: unless-stopped
     ports:
       - "4200:4200"
     volumes:
-      # Mount a folder that contains config.json (see config.example.json).
-      # On Unraid this is typically /mnt/user/appdata/printer-obs-overlay
-      # Writable: the server caches parsed G-code metadata in <config>/meta-cache/.
-      - ./config:/config
+      # Konfiguration, Zugangsdaten und G-code-Cache. Unraid: /mnt/user/appdata/printer-obs-overlay
+      - ./data:/config
     environment:
-      - PORT=4200
-      - CONFIG_PATH=/config/config.json
-      - PUBLIC_BASE_URL=http://192.168.1.234:4200
+      - TZ=Europe/Berlin
+      # Besitzer der Dateien im Datenordner (Unraid: 99/100, sonst meist 1000/1000)
+      - PUID=99
+      - PGID=100
+      # Optional: feste Adresse fuer OBS-Links, wenn das Dashboard ueber einen anderen Namen geoeffnet wird
+      # - PUBLIC_BASE_URL=http://192.168.1.234:4200

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Printer OBS Overlay</title>
+  <link rel="icon" href="favicon.png" />
+  <link rel="stylesheet" href="fonts/inter.css" />
+  <link rel="stylesheet" href="dashboard/dashboard.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="logo"><img src="favicon.png" alt="" />Printer <span>Overlay</span></div>
+    <nav class="tabs" id="tabs">
+      <button class="tab" data-view="overview">Übersicht</button>
+      <button class="tab" data-view="printers">Drucker</button>
+      <button class="tab" data-view="overlay">Overlay &amp; OBS</button>
+      <button class="tab" data-view="toolchanger">Toolchanger</button>
+      <button class="tab" data-view="system">System</button>
+    </nav>
+    <div class="spacer"></div>
+    <span class="version" id="version"></span>
+  </header>
+  <main id="view"></main>
+  <div class="toasts" id="toasts"></div>
+  <script type="module" src="dashboard/main.js"></script>
+</body>
+</html>

@@ -1,162 +1,118 @@
+<p align="center"><img src="docs/logo.png" width="96" alt=""></p>
+
 # Printer OBS Overlay
 
-Zeigt Live-Werte deiner 3D-Drucker als transparentes Overlay in OBS an:
-Druckfortschritt, Restzeit, Düsen-/Bett-Temperatur, Filament (Material + Farbe), Anzahl
-Filamentwechsel, Speed, Flow, Z-Höhe und Lüfterdrehzahlen.
+Live-Werte deiner 3D-Drucker als Stream-Overlay in OBS – im Prusa-Look, mit voller
+Unterstützung für Toolchanger (Core One INDX, XL).
 
-Features:
-- **Mehrere Drucker** über eine `config.json`
-- **Dashboard** (`http://<server>:4200/`): Online-Status, Fortschritt, Jobdatei, Kamera-Link und OBS-Link je Drucker
-- **Auswahl oben**: globaler aktiver Drucker plus getrennte Bereiche für Übersicht, Drucker-Setup, Overlay-Builder und Toolchanger-Analyse
-- **Web-Setup**: Drucker hinzufügen/bearbeiten/löschen, Config speichern und Verbindung testen
-- **Layout-Presets**: Bereiche, Layout, Akzentfarbe, Branding und Social-Auswahl als OBS-Link speichern
-- **Branding**: Name und sichtbare Social-Media-Seiten im Dashboard wählen
-- **Druckermodelle**: xBuddy-Drucker, Core One INDX und XL-Familie auswählen; Toolchanger-Felder erscheinen nur dort
-- **Netzwerksuche**: `/24`-Netz nach PrusaLink, OctoPrint und Moonraker-Kandidaten scannen
-- **INDX/XL-G-Code-Analyse**: `.gcode` und `.bgcode` hochladen, Toolchanges, Layer, Waste und erste Tool-Events prüfen
-- **Adapter**: `prusalink`, `octoprint`, `moonraker`
-- **Demo-Modus** ohne echten Drucker
-- Zwei Layouts: **Leiste** (vollflächige Fußzeile + Rahmen) oder **Karte** (frei platzierbar)
-- Läuft als **Docker-Container** (z. B. auf Unraid) oder lokal mit Node.js
+- **Drucker:** PrusaLink (MINI, MK3.5, MK4/S, Core One/L, XL), OctoPrint, Klipper/Moonraker
+- **Overlay:** Fortschritt, Restzeit, Fertig-Uhrzeit, Düse, Bett, Filament mit Farbe, Layer, Speed, Flow, Z, Lüfter
+- **Toolchanger:** aktives Tool, Wechsel x/y, Slot-Leiste mit Farben, Abfallmenge – live aus der Druckdatei berechnet, ohne Spezial-Firmware
+- **Dashboard im Browser:** Drucker einrichten, Netzwerksuche, Verbindungstest, Overlay-Varianten, Live-Vorschau, OBS-Link
+- **Änderungen erscheinen sofort in OBS** – kein Neuladen der Quelle nötig
+- Läuft als **Docker-Container**, **Windows-App** oder direkt als **OBS-Plugin**
 
-## 1. Druckerzugriff vorbereiten
+## Installation – eine Variante wählen
 
-- PrusaLink: Benutzername und Passwort aus PrusaLink eintragen. Digest-Login wird unterstützt; ein API-Key kann alternativ weiter genutzt werden.
-- OctoPrint: API-Key unter **Settings > Application Keys**.
-- Moonraker/Klipper: Host ist meist `<ip>:7125`; API-Key kann leer bleiben, wenn Moonraker lokal offen ist.
+| | Für wen | Dashboard |
+|---|---|---|
+| **A. Windows-Installer** | Streaming-PC mit Windows, am einfachsten | Startmenü → *Printer OBS Overlay* |
+| **B. Docker** | Unraid, Synology, Raspberry Pi, Server, der immer läuft | `http://<server-ip>:4200` |
+| **C. Nur OBS-Plugin** | Alles in OBS, kein separates Programm | OBS → *Werkzeuge* → *Printer Overlay Dashboard* |
 
-## 2. Auf Unraid als Docker betreiben (empfohlen)
+### A. Windows
 
-### a) Konfiguration anlegen
+1. `PrinterOBSOverlay-Setup-x.y.z.exe` von den [Releases](https://github.com/NilsN3DP/printer-obs-overlay/releases) herunterladen und ausführen.
+2. Auswählen: **Windows-App** und/oder **OBS-Plugin** (beides ist vorausgewählt). Optional: *Beim Anmelden automatisch starten*.
+3. Nach der Installation öffnet sich das Dashboard. Die App läuft unsichtbar im Hintergrund; beenden unter *System → Server beenden*.
 
-Lege auf dem Unraid-Server einen Ordner an, z. B.
-`/mnt/user/appdata/printer-obs-overlay/`. Beim ersten Start kann die Config leer sein;
-das Dashboard schreibt sie nach `/config/config.json`. Alternativ kannst du eine
-`config.json` vorab anlegen (Vorlage: `config.example.json`):
+Ohne Installation geht es auch: `printer-overlay.exe` herunterladen und doppelklicken.
+Daten liegen in `%APPDATA%\PrinterOverlay`.
 
-```json
-{
-  "pollIntervalMs": 2000,
-  "printers": [
-    { "id": "coreone", "name": "Core One INDX", "type": "prusalink", "host": "192.168.1.122", "username": "maker", "password": "DEIN_PASSWORT", "cameraUrl": "" },
-    { "id": "octo", "name": "OctoPrint", "type": "octoprint", "host": "192.168.1.140", "apiKey": "KEY_2", "cameraUrl": "" },
-    { "id": "klipper", "name": "Klipper", "type": "moonraker", "host": "192.168.1.150:7125", "apiKey": "", "cameraUrl": "" }
-  ]
-}
+### B. Docker
+
+```bash
+docker run -d --name printer-obs-overlay --restart unless-stopped \
+  -p 4200:4200 -v /pfad/zu/daten:/config \
+  ghcr.io/nilsn3dp/printer-obs-overlay:latest
 ```
 
-`id` = interner Kurzname (frei wählbar, in der URL verwendet), `name` = Anzeigename, `type` = Adapter.
-API-Keys und Passwörter bleiben nur in dieser Config-Datei und werden im Dashboard nicht im Klartext zurückgegeben.
+oder mit [`docker-compose.yml`](docker-compose.yml): `docker compose up -d`.
 
-### b) Image bauen und starten
+**Unraid:** *Docker → Add Container* und die Werte aus
+[`packaging/docker/unraid-template.xml`](packaging/docker/unraid-template.xml) übernehmen
+(Port 4200, Pfad `/mnt/user/appdata/printer-obs-overlay` → `/config`). Die Vorlage kann
+auch nach `/boot/config/plugins/dockerMan/templates-user/` kopiert werden.
 
-Projektordner auf den Server kopieren, dann:
+| Variable | Standard | Bedeutung |
+|---|---|---|
+| `PUBLIC_BASE_URL` | – | Feste Adresse für kopierte OBS-Links, z. B. `http://192.168.1.234:4200` |
+| `PUID` / `PGID` | `99` / `100` | Besitzer der Dateien im Datenordner |
+| `TZ` | `Europe/Berlin` | Zeitzone für „fertig um …" |
+| `PORT` | `4200` | Port im Container |
 
+### C. OBS-Plugin
+
+Im Windows-Installer die Komponente **OBS-Plugin** wählen – oder das Plugin-Zip aus den
+Releases nach `C:\ProgramData\obs-studio\plugins\` entpacken. Dann in OBS:
+
+1. *Quelle hinzufügen* → **Printer Overlay**
+2. Drucker wählen – fertig. Die Quelle ist automatisch 1920 × 1080.
+3. Drucker und Aussehen einrichten: Button *Dashboard öffnen* in der Quelle oder *Werkzeuge → Printer Overlay Dashboard*.
+
+Das Plugin bringt seinen eigenen Server mit und startet/beendet ihn zusammen mit OBS.
+Läuft auf dem PC bereits die Windows-App, nutzt das Plugin diese mit. Wer den
+Docker-Container verwendet, stellt in der Quelle *Server → Extern* ein und trägt dessen
+Adresse ein.
+
+## Einrichten
+
+1. **Drucker:** *Drucker → Im Netzwerk suchen* oder *+ Hinzufügen*. Für PrusaLink Benutzer
+   (meist `maker`) und Passwort vom Druckerdisplay unter *Einstellungen → Netzwerk → PrusaLink*.
+   Für INDX/XL das passende Modell wählen – dann erscheinen Slotplan und Toolchanger-Bereiche.
+2. **Overlay & OBS:** Kanalname, Akzentfarbe und Social-Symbole festlegen. Unter
+   *Overlay-Varianten* Layout (Leiste unten oder Karte) und Bereiche wählen; die Vorschau
+   zeigt Änderungen vor dem Speichern. Jedem Drucker wird unter *Drucker* eine Variante
+   zugewiesen.
+3. **In OBS:** Plugin-Quelle verwenden oder *Quelle hinzufügen → Browser* mit dem kopierten
+   Link (1920 × 1080).
+
+Der Demo-Drucker (unter *System* abschaltbar) zeigt alles mit simulierten INDX-Daten.
+
+### Toolchanger ohne Spezial-Firmware
+
+Bei PrusaLink lädt der Server die laufende Druckdatei (`.gcode`/`.bgcode`) einmal vom
+Drucker und berechnet daraus aktives Tool, Wechsel, Layer und Abfall. PrusaLink liefert
+Dateien während des Drucks langsam aus – bei großen Dateien kann das einige Minuten dauern;
+der Fortschritt steht im Dashboard. Das Ergebnis wird gecacht. Unter *Toolchanger* lassen
+sich Dateien vorab prüfen.
+
+## Von Version 1 umsteigen
+
+- Bestehende `config.json` wird unverändert übernommen (Drucker, Zugangsdaten, Presets, Branding).
+- Docker: gleicher Datenordner `/config`, gleicher Port. Die alte Variable `CONFIG_PATH` funktioniert weiter.
+- Alte OBS-Links (`/overlay.html?printer=…&sections=…`) funktionieren weiter. Neue Links sind kurz
+  (`/overlay.html?printer=…`); das Aussehen kommt aus der zugewiesenen Variante.
+
+## Entwicklung
+
+Voraussetzung: Node.js 22+. Der Server hat keine Laufzeit-Abhängigkeiten.
+
+```bash
+npm install          # nur Build-Werkzeuge
+npm run dev          # Server mit Neustart bei Änderungen, Daten in ./data
+npm test
 ```
-docker compose up -d --build
-```
 
-Das `docker-compose.yml` mountet `./config` nach `/config` (dort liegt `config.json`) und
-veröffentlicht Port `4200`.
+| Befehl | Ergebnis |
+|---|---|
+| `npm run build:exe` | `dist/printer-overlay.exe` (Node SEA, Weboberfläche eingebettet) |
+| `npm run build:obs` | `dist/obs-plugin/printer-overlay/` (braucht Visual Studio, CMake, installiertes OBS) |
+| `npm run build:installer` | `dist/PrinterOBSOverlay-Setup-x.y.z.exe` (braucht Inno Setup 6) |
+| `docker build -t printer-obs-overlay .` | Docker-Image |
 
-**Alternativ ohne Compose** (z. B. Unraid „Add Container"):
-- Repository/Image: `ghcr.io/nilsn3dp/printer-obs-overlay:latest` oder lokal `docker build -t printer-obs-overlay .`
-- Port: `4200` -> `4200`
-- Volume: Host `/mnt/user/appdata/printer-obs-overlay` -> Container `/config`
-- Env (optional): `CONFIG_PATH=/config/config.json`, `PORT=4200`
+Aufbau und Datenfluss: [docs/ARCHITEKTUR.md](docs/ARCHITEKTUR.md).
 
-### c) Öffnen
+## Lizenz
 
-`http://<unraid-ip>:4200/` -> Dashboard. Dort kannst du Drucker anlegen, testen, Presets speichern,
-G-Code/INDX-Dateien analysieren und die fertigen OBS-URLs kopieren.
-
-## 3. Lokal ohne Docker (Alternative)
-
-Einzelner Drucker per `.env` (siehe `.env.example`) **oder** mehrere per `config.json`
-im Projektordner. Dann:
-
-- **`start-overlay.bat` doppelklicken** (Fenster minimieren, offen lassen), oder
-- `npm install && npm start`
-
-## 4. In OBS einbinden
-
-1. Quelle hinzufügen -> **Browser**
-2. Im Konfigurator die passende URL erzeugen und einfügen, z. B.
-   `http://<server>:4200/overlay.html?printer=coreone&sections=progress,time,nozzle,bed,filament`
-3. Breite/Höhe:
-   - Layout **Leiste**: exakt deine Canvas-Auflösung (z. B. `1920` x `1080`), Quelle ganz
-     nach oben ziehen -> legt sich als Rahmen + Fußzeile über die Szene
-   - Layout **Karte**: kleinerer Bereich reicht, frei platzierbar
-4. Haken bei "Lokale Datei" **nicht** setzen
-5. Optional: "Shutdown source when not visible" deaktivieren
-
-Hintergrund ist transparent; nur die gewählten Bereiche werden gezeichnet.
-
-### URL-Parameter (falls du die URL von Hand baust)
-
-| Parameter  | Beispiel                          | Bedeutung |
-|------------|-----------------------------------|-----------|
-| `printer`  | `?printer=coreone`                | Drucker-`id` aus der config.json (Standard: erster) |
-| `sections` | `&sections=progress,nozzle,bed`   | Nur diese Bereiche zeigen (fehlt = alle) |
-| `layout`   | `&layout=card`                    | `bar` (Standard) oder `card` |
-| `accent`   | `&accent=%23ffaa00`               | Akzentfarbe als URL-codiertes Hex |
-| `brand`    | `&brand=N3DP_de`                  | Branding-Text |
-| `socials`  | `&socials=youtube,instagram`      | Sichtbare Socials; `none` blendet alle aus |
-| `poll`     | `&poll=2000`                      | Abfrageintervall im Browser (ms) |
-
-Verfügbare Bereiche: `frame`, `brand`, `printerName`, `status`, `file`, `progress`, `time`,
-`nozzle`, `bed`, `filament`, `changes`, `tool`, `slots`, `waste`, `layer`, `speed`, `flow`, `z`, `fanHotend`, `fanPrint`.
-
-Das Branding-Handle kann im Dashboard gesetzt werden; es wird als URL-Parameter an OBS übergeben.
-
-## Adapter-Hinweise
-
-### PrusaLink
-
-Liefert die meisten Felder und kann G-Code-Metadaten cachen, wenn die laufende Datei per PrusaLink downloadbar ist. Für PrusaLink reicht Benutzername/Passwort inklusive Digest-Auth; ein API-Key ist nur noch eine Alternative. Erweiterte Felder wie Filamentfarbe, Werkzeug, Layer und Waste kommen entweder aus Custom-Firmware oder aus G-Code-Metadaten.
-Der Standardweg fuer INDX/Toolchange-Prüfung ist der Upload im Dashboard: `.gcode` oder `.bgcode` hochladen und vor dem Stream prüfen, ob Toolchanges, Layer und Waste plausibel erkannt werden.
-
-Für INDX und XL kann im Drucker-Editor pro Slot die tatsächlich geladene Rolle gepflegt werden
-(Hersteller, Produkt/Farbe, Material und Hex-Farbe). Diese Angaben überschreiben für das aktive
-Tool die generischen Slicerwerte. Das Overlay zeigt alle Slots und markiert den aktiven Slot.
-Mehrere Wechsel innerhalb desselben Fortschrittsprozents werden zusätzlich über die `M73 R`-
-Restzeit unterschieden. Ein deutlicher Düsentemperaturabfall nahe einem Tool-Event wird mit
-Hysterese als `Swapping` angezeigt; dies ist bewusst eine Schätzung und kein Firmware-Livefeld.
-
-### OctoPrint
-
-Liefert Basisdaten wie State, Fortschritt, Dateiname, Nozzle/Bed und Zeiten. Spezialfelder wie Werkzeugwechsel, Waste oder Filamentfarbe bleiben leer, wenn sie nicht von OctoPrint-Plugins bereitgestellt werden.
-
-### Moonraker/Klipper
-
-Liefert Basisdaten aus `printer/objects/query`. Ohne zusätzliche Klipper/Moonraker-Objekte bleiben Spezialfelder leer.
-
-## Filament-Infos, INDX & Wechsel
-
-Das Overlay bevorzugt Live-Felder aus Custom-Firmware, wenn sie vorhanden sind. Ohne CFW nutzt
-PrusaLink den Dateiweg: laufende Datei downloaden oder Datei im Dashboard hochladen und daraus
-Toolchanges, Layer, Material/Farben und Waste ableiten.
-
-Optionale Custom-Firmware-Felder in der PrusaLink-API (`/api/v1/status` -> `printer`):
-
-- `material` - geladener Filamenttyp (z. B. "PLA")
-- `filament_color` - zuletzt geladene Farbe als Hex (z. B. "#00AFC7")
-- `filament_changes` - abgeschlossene M600-Wechsel seit Druckstart
-- `filament_changes_total` - geplante Gesamtzahl (aus Slicer-Metadatum `total toolchanges`);
-  das Overlay zeigt dann `x / gesamt`
-- `tool` / `tools_total` - aktives Werkzeug für INDX/MMU/Toolchanger
-- `waste_fill` / `waste_capacity` - live Wastebin, falls Firmware das liefert
-
-Mit Original-Firmware fehlen diese Live-Felder; bei PrusaLink versucht das Overlay dann die
-Ableitung aus G-Code/BGCode. INDX `M8600 S<n>` und normale `T<n>`-Toolwechsel werden erkannt.
-
-## Fehlerbehebung
-
-- **"Offline" / "fetch failed"**: Drucker nicht erreichbar. Host/IP und PrusaLink-Zugang bzw. API-Key in der
-  `config.json` (bzw. `.env`) prüfen; Drucker + Server im selben Netzwerk.
-- **HTTP 401**: API-Key falsch oder PrusaLink am Drucker deaktiviert.
-- **Konfigurator zeigt "Keine Drucker konfiguriert"**: `config.json` nicht gefunden/leer.
-  Bei Docker prüfen, dass das Volume auf `/config` zeigt und `config.json` dort liegt.
-- **Werte ändern sich nicht**: Dashboard aktualisieren. Nach manuellem Editieren der Config den Container/Server neu starten.
-- **INDX zeigt keine Toolchanges**: Datei im Dashboard hochladen. Wenn dort keine Events erkannt werden,
-  enthält die Datei vermutlich keine `M8600 S<n>`- oder `T<n>`-Events oder sie sind anders codiert.
+MIT. Schrift: Inter (SIL Open Font License).
