@@ -1,0 +1,48 @@
+name: Plugin release
+
+# Ein Tag wie v2.0.1 baut das OBS-Plugin und haengt das Zip an einen GitHub-Release.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    env:
+      OBS_VERSION: 32.1.2
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - run: npm ci
+      - run: npm test
+      - run: npm run build:exe
+
+      # Das Plugin braucht obs.dll / obs-frontend-api.dll zum Erzeugen der Import-Bibliotheken.
+      - name: OBS Studio (nur fuer den Build)
+        shell: pwsh
+        run: |
+          $zip = "$env:RUNNER_TEMP\obs.zip"
+          Invoke-WebRequest "https://github.com/obsproject/obs-studio/releases/download/$env:OBS_VERSION/OBS-Studio-$env:OBS_VERSION-Windows-x64.zip" -OutFile $zip
+          Expand-Archive $zip "$env:RUNNER_TEMP\obs"
+
+      - name: OBS-Plugin
+        shell: pwsh
+        run: ./packaging/obs-plugin/build.ps1 -ObsDir "$env:RUNNER_TEMP\obs" -ObsTag $env:OBS_VERSION
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: obs-plugin
+          path: dist/printer-overlay-obs-plugin-*.zip
+
+      - if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/printer-overlay-obs-plugin-*.zip

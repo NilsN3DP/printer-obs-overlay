@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en" class="is-loading">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Printer Overlay</title>
+  <link rel="stylesheet" href="fonts/inter.css" />
+  <link rel="stylesheet" href="overlay/overlay.css" />
+</head>
+<body>
+  <div class="corner corner--tl" data-section="frame"></div>
+  <div class="corner corner--tr" data-section="frame"></div>
+  <div class="corner corner--bl" data-section="frame"></div>
+  <div class="corner corner--br" data-section="frame"></div>
+
+  <footer class="panel" id="panel">
+    <div class="identity">
+      <div class="brand" data-section="brand">
+        <img class="brand-logo hidden" id="brandLogo" alt="" />
+        <span class="handle" id="handle"></span>
+        <div class="socials">
+          <svg class="social" data-social="youtube" viewBox="0 0 24 24" aria-label="YouTube"><path d="M23.5 6.2a3 3 0 0 0-2.12-2.12C19.5 3.55 12 3.55 12 3.55s-7.5 0-9.38.53A3 3 0 0 0 .5 6.2 31.3 31.3 0 0 0 0 12a31.3 31.3 0 0 0 .5 5.8 3 3 0 0 0 2.12 2.12c1.88.53 9.38.53 9.38.53s7.5 0 9.38-.53a3 3 0 0 0 2.12-2.12A31.3 31.3 0 0 0 24 12a31.3 31.3 0 0 0-.5-5.8zM9.6 15.3V8.7l6.2 3.3z" fill="currentColor"/></svg>
+          <svg class="social" data-social="instagram" viewBox="0 0 24 24" aria-label="Instagram"><rect x="2" y="2" width="20" height="20" rx="5.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4.6" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="17.6" cy="6.4" r="1.4" fill="currentColor"/></svg>
+          <svg class="social" data-social="tiktok" viewBox="0 0 24 24" aria-label="TikTok"><path d="M14.7 2h3.1c.4 2.5 1.8 4 4.2 4.5v3.2c-1.5 0-2.9-.4-4.1-1.2v6.6c0 4.2-2.6 6.9-6.7 6.9-3.6 0-6.2-2.4-6.2-5.8 0-3.6 2.8-6.1 6.7-5.9v3.4c-1.8-.3-3 .6-3 2.3 0 1.5 1 2.5 2.5 2.5 1.6 0 2.7-1 2.7-3.3V2h.8z" fill="currentColor"/></svg>
+          <svg class="social" data-social="twitch" viewBox="0 0 24 24" aria-label="Twitch"><path d="M4.2 2h16.2v11.2l-4.6 4.6h-3.5l-2.5 2.5H7.3v-2.5H3V5.6L4.2 2zm1.9 3.1v10.4h3.1V18l2.5-2.5h4.1l2.5-2.5V5.1H6.1zM11.1 7.4h1.8v5.1h-1.8V7.4zm4.3 0h1.8v5.1h-1.8V7.4z" fill="currentColor"/></svg>
+          <svg class="social" data-social="website" viewBox="0 0 24 24" aria-label="Website"><circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M2.5 12h19M12 2.5c2.6 2.8 3.9 6 3.9 9.5S14.6 18.7 12 21.5M12 2.5C9.4 5.3 8.1 8.5 8.1 12s1.3 6.7 3.9 9.5" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+        </div>
+      </div>
+      <div class="printer-name" id="printerName" data-section="printerName"></div>
+    </div>
+
+    <div class="divider" data-divider></div>
+
+    <div class="body">
+      <div class="offline hidden" id="offline">
+        <span class="state state--offline">Offline</span>
+        <span id="offlineText">Printer unreachable</span>
+      </div>
+
+      <div class="job" id="job">
+        <div class="job-copy">
+          <div class="job-top">
+            <span class="filename" id="filename" data-section="file">&ndash;</span>
+            <span class="state state--idle" id="state" data-section="status">Connecting</span>
+          </div>
+          <div class="job-sub" data-section="time">
+            <b id="timeRemaining">--:--</b><span>left · done at</span><b id="doneAt">--:--</b>
+          </div>
+        </div>
+        <div class="progress" data-section="progress">
+          <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+          <span class="progress-pct" id="progressPct">0%</span>
+        </div>
+        <div class="job-times" data-section="time">
+          <b id="timeElapsed">--:--</b><span>elapsed · ~</span><b id="timeTotal">--:--</b><span>total</span>
+        </div>
+      </div>
+
+      <div class="metrics" id="metrics">
+        <div class="metric" data-section="nozzle"><label>Nozzle</label><div><b id="nozzle">&ndash;</b><small id="nozzleTarget"></small></div></div>
+        <div class="metric" data-section="bed"><label>Bed</label><div><b id="bed">&ndash;</b><small id="bedTarget"></small></div></div>
+        <div class="metric metric--wide" data-section="filament"><label>Filament</label><div><i class="color-dot hidden" id="filamentColor"></i><b id="filament" class="ellipsis">&ndash;</b></div></div>
+        <div class="metric" data-section="changes"><label>Changes</label><div><b id="changes">&ndash;</b></div></div>
+        <div class="metric metric--narrow" data-section="tool"><label>Tool</label><div><b id="tool">&ndash;</b></div></div>
+        <div class="metric metric--wide" data-section="slots"><label>Tool · Filament</label><div class="slot-rail" id="slots"></div></div>
+        <div class="metric" data-section="waste"><label>Waste</label><div><b id="waste">&ndash;</b><small id="wasteSub"></small></div></div>
+        <div class="metric" data-section="layer"><label>Layer</label><div><b id="layer">&ndash;</b></div></div>
+        <div class="metric metric--narrow" data-section="speed"><label>Speed</label><div><b id="speed">&ndash;</b></div></div>
+        <div class="metric metric--narrow" data-section="flow"><label>Flow</label><div><b id="flow">&ndash;</b></div></div>
+        <div class="metric" data-section="z"><label>Z-Height</label><div><b id="z">&ndash;</b></div></div>
+        <div class="metric" data-section="fanHotend"><label>Fan Hotend</label><div><b id="fanHotend">&ndash;</b></div></div>
+        <div class="metric" data-section="fanPrint"><label>Fan Part</label><div><b id="fanPrint">&ndash;</b></div></div>
+      </div>
+    </div>
+  </footer>
+
+  <script type="module" src="overlay/overlay.js"></script>
+</body>
+</html>

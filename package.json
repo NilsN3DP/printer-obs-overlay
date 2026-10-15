@@ -1,0 +1,25 @@
+{
+  "name": "printer-obs-overlay",
+  "version": "2.0.0",
+  "description": "OBS-Plugin fuer 3D-Drucker-Overlays (PrusaLink, OctoPrint, Klipper/Moonraker)",
+  "license": "MIT",
+  "type": "module",
+  "main": "src/server/main.js",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node src/server/main.js",
+    "dev": "node --watch src/server/main.js --open",
+    "test": "node --test \"test/*.test.js\"",
+    "build:fonts": "node scripts/build.mjs fonts",
+    "build:exe": "node scripts/build.mjs exe",
+    "build": "node scripts/build.mjs plugin"
+  },
+  "devDependencies": {
+    "@fontsource-variable/inter": "^5.1.0",
+    "esbuild": "^0.25.0",
+    "postject": "^1.0.0-alpha.6",
+    "rcedit": "^5.0.2"
+  }
+}

@@ -1,0 +1,244 @@
+/* Broadcast-Overlay fuer OBS (1920x1080 Canvas). Typografie und Haarlinien statt
+   Dashboard-Kacheln; feste Mindestbreiten, damit Live-Werte nichts verschieben. */
+:root {
+  --accent: #fa6831;
+  --text: #e9eaec;
+  --muted: #747a83;
+  --line: rgba(255, 255, 255, 0.09);
+  --bg-a: rgba(17, 19, 22, 0.985);
+  --bg-b: rgba(12, 14, 17, 0.985);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: transparent;
+  color: var(--text);
+  font-family: 'Inter', 'Segoe UI', Roboto, Arial, sans-serif;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+
+.hidden, .section-off, .no-data { display: none !important; }
+.is-loading .panel, .is-loading .corner { opacity: 0; }
+.panel, .corner { transition: opacity 0.25s ease; }
+.ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+
+/* ---- Eckrahmen ---- */
+.corner {
+  position: fixed;
+  width: 56px;
+  height: 56px;
+  border: 0 solid color-mix(in srgb, var(--accent) 72%, transparent);
+  pointer-events: none;
+}
+.corner--tl { top: 20px; left: 20px; border-top-width: 2px; border-left-width: 2px; }
+.corner--tr { top: 20px; right: 20px; border-top-width: 2px; border-right-width: 2px; }
+.corner--bl { bottom: 186px; left: 20px; border-bottom-width: 2px; border-left-width: 2px; }
+.corner--br { bottom: 186px; right: 20px; border-bottom-width: 2px; border-right-width: 2px; }
+
+/* ---- Leiste (Standard) ---- */
+.panel {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  min-height: 166px;
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  padding: 16px 26px;
+  background:
+    radial-gradient(circle at 18% -80%, color-mix(in srgb, var(--accent) 6%, transparent), transparent 38%),
+    linear-gradient(112deg, var(--bg-a), var(--bg-b));
+  border-top: 1px solid var(--line);
+  box-shadow: 0 -14px 34px rgba(0, 0, 0, 0.28);
+}
+
+.identity {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 150px;
+  flex-shrink: 0;
+}
+
+.brand { display: flex; flex-direction: column; gap: 8px; }
+.brand-logo { max-width: 150px; max-height: 40px; object-fit: contain; object-position: left center; }
+.handle { font-size: 20px; font-weight: 800; line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.handle .accent { color: var(--accent); font-weight: 700; }
+.socials { display: flex; gap: 10px; align-items: center; }
+.social { width: 15px; height: 15px; color: #80868f; }
+
+.printer-name {
+  font-size: 13px;
+  font-weight: 650;
+  color: #d8dadd;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.divider { width: 1px; align-self: stretch; margin: 8px 0; background: rgba(255, 255, 255, 0.11); flex-shrink: 0; }
+
+.body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+}
+
+.offline { display: flex; align-items: center; gap: 12px; font-size: 15px; color: #e3a0a0; }
+
+/* Druckauftrag: Dateiname/Status | Fortschritt | Zeiten */
+.job {
+  display: grid;
+  grid-template-columns: minmax(300px, 1.15fr) minmax(300px, 1.9fr) auto;
+  align-items: center;
+  gap: 18px;
+}
+.job-copy { min-width: 0; }
+.job-top { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.filename { font-size: 15px; font-weight: 750; color: #f1f2f4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.job-sub, .job-times { display: flex; align-items: baseline; gap: 5px; font-size: 10.5px; font-weight: 550; color: var(--muted); }
+.job-sub { margin-top: 6px; }
+.job-sub b, .job-times b { color: #c9ccd2; font-weight: 750; }
+.job-times { justify-content: flex-end; font-size: 11px; white-space: nowrap; }
+.job-times b { color: #dadce0; }
+
+.state {
+  flex-shrink: 0;
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  padding: 3px 7px;
+  border-radius: 2px;
+  border: 1px solid;
+}
+.state--offline { background: #25282d; color: #adb1b8; border-color: #3b3f46; }
+.state--printing { background: color-mix(in srgb, var(--accent) 13%, transparent); color: color-mix(in srgb, var(--accent) 70%, #fff); border-color: color-mix(in srgb, var(--accent) 55%, transparent); }
+.state--idle { background: rgba(74, 153, 104, 0.12); color: #91cfa8; border-color: rgba(74, 153, 104, 0.4); }
+.state--paused { background: rgba(177, 142, 45, 0.12); color: #d8bd71; border-color: rgba(177, 142, 45, 0.4); }
+.state--error { background: rgba(174, 58, 58, 0.12); color: #e58b8b; border-color: rgba(174, 58, 58, 0.45); }
+.state--swapping { background: color-mix(in srgb, var(--accent) 18%, transparent); color: #fff; border-color: var(--accent); animation: pulse 1.2s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: 0.55; } }
+
+.progress { display: flex; align-items: center; gap: 12px; }
+.progress-track {
+  flex: 1;
+  height: 10px;
+  padding: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 999px;
+  background: #202329;
+  overflow: hidden;
+}
+.progress-fill {
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 82%, #b8360f), var(--accent));
+  box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 22%, transparent);
+  transition: width 0.6s ease;
+}
+.progress-pct { width: 52px; flex-shrink: 0; font-size: 20px; font-weight: 800; color: var(--accent); text-align: right; }
+
+/* Messwerte: Haarlinien-Raster. Der negative Rand versteckt die erste Linie jeder Zeile. */
+.metrics {
+  display: flex;
+  flex-wrap: wrap;
+  row-gap: 10px;
+  padding-top: 11px;
+  border-top: 1px solid rgba(255, 255, 255, 0.075);
+  overflow: hidden;
+}
+.metric {
+  flex: 1 1 118px;
+  min-width: 118px;
+  margin-left: -1px;
+  padding: 0 14px;
+  border-left: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.metric--narrow { flex-basis: 86px; min-width: 86px; }
+.metric--wide { flex-basis: 196px; min-width: 196px; }
+.metric label {
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.metric > div { display: flex; align-items: baseline; gap: 6px; height: 24px; min-width: 0; }
+.metric b { font-size: 17px; font-weight: 750; color: var(--text); white-space: nowrap; }
+.metric small { font-size: 10px; font-weight: 550; color: #70757d; white-space: nowrap; }
+
+.color-dot { width: 13px; height: 13px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.35); flex-shrink: 0; align-self: center; }
+
+.slot-rail { display: flex; align-items: center !important; gap: 6px; color: var(--muted); }
+.slot {
+  position: relative;
+  width: 16px;
+  height: 24px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 3px;
+  border: 1px solid #3b3f46;
+  border-radius: 3px;
+  font-size: 7.5px;
+  font-weight: 700;
+  color: #7d828b;
+}
+.slot i { position: absolute; top: 3px; width: 9px; height: 5px; border-radius: 2px; }
+.slot.active { border-color: var(--accent); color: #fff; box-shadow: 0 0 9px color-mix(in srgb, var(--accent) 25%, transparent); }
+.slot.empty { opacity: 0.38; border-style: dashed; }
+
+/* ---- Karte: kompaktes, frei platzierbares Panel ---- */
+.layout-card .corner { display: none; }
+.layout-card .panel {
+  /* Position: Anker-Ecke + Abstand, gesetzt von overlay.js (frei verschiebbar). */
+  left: var(--card-left, 24px);
+  right: var(--card-right, auto);
+  top: var(--card-top, 24px);
+  bottom: var(--card-bottom, auto);
+  width: 440px;
+  min-height: 0;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 14px;
+  padding: 18px 20px;
+  border-radius: 14px;
+  border-top: 0;
+  border-left: 3px solid var(--accent);
+  transform: scale(var(--card-scale, 1));
+  transform-origin: var(--card-origin, top left);
+}
+/* Bearbeitungsmodus (Vorschau im Dashboard): Karte mit der Maus verschieben. */
+.edit-mode.layout-card .panel { cursor: grab; outline: 2px dashed color-mix(in srgb, var(--accent) 55%, transparent); outline-offset: 6px; user-select: none; touch-action: none; }
+.edit-mode.dragging .panel { cursor: grabbing; transition: none; }
+.layout-card .identity { width: auto; flex-direction: row; justify-content: space-between; align-items: center; }
+.layout-card .brand { flex-direction: row; align-items: center; gap: 12px; }
+.layout-card .divider { width: auto; height: 1px; margin: 0; }
+.layout-card .job { display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
+.layout-card .job-times { justify-content: flex-start; }
+.layout-card .metrics { gap: 8px; padding-top: 0; border-top: 0; overflow: visible; }
+.layout-card .metric {
+  flex: 1 1 120px;
+  margin-left: 0;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.055);
+}
