@@ -221,7 +221,10 @@ html, body {
   border-radius: 14px;
   border-top: 0;
   border-left: 3px solid var(--accent);
+  zoom: var(--card-scale, 1);
 }
+.layout-card.pos-tr .panel, .layout-card.pos-br .panel { left: auto; right: 24px; }
+.layout-card.pos-bl .panel, .layout-card.pos-br .panel { top: auto; bottom: 24px; }
 .layout-card .identity { width: auto; flex-direction: row; justify-content: space-between; align-items: center; }
 .layout-card .brand { flex-direction: row; align-items: center; gap: 12px; }
 .layout-card .divider { width: auto; height: 1px; margin: 0; }

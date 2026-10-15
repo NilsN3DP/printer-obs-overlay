@@ -1,6 +1,6 @@
 // Overlay & OBS: Branding, Overlay-Varianten (Presets), OBS-Link und Live-Vorschau.
-import { DEFAULT_ACCENT, SECTIONS, SECTION_KEYS, SOCIALS, buildOverlayUrl } from '../../shared/sections.js';
-import { confirmDialog, copyText, field, h, segmented, select, slugify, toast } from '../ui.js';
+import { CARD_POSITIONS, DEFAULT_ACCENT, SECTIONS, SECTION_KEYS, SOCIALS, buildOverlayUrl } from '../../shared/sections.js';
+import { confirmDialog, copyText, field, h, scaleSlider, segmented, select, slugify, toast } from '../ui.js';
 
 let app;
 let root;
@@ -58,9 +58,9 @@ function brandingCard() {
   const set = (key) => (e) => { theme[key] = e.target.value; markDirty(); };
   return h('div', { class: 'card' },
     h('h2', {}, 'Branding'),
-    h('p', { class: 'sub' }, 'Gilt für alle Overlays. Ein Unterstrich färbt den Teil danach in der Akzentfarbe (z. B. MeinKanal_de).'),
+    h('p', { class: 'sub' }, 'Gilt für alle Overlays. Ein Unterstrich färbt den Teil danach in der Akzentfarbe.'),
     h('div', { class: 'grid2' },
-      field('Kanalname', h('input', { type: 'text', maxLength: 32, value: theme.brandText, oninput: set('brandText') })),
+      field('Anzeigename', h('input', { type: 'text', maxLength: 32, value: theme.brandText, oninput: set('brandText') })),
       field('Akzentfarbe', h('div', { class: 'row', style: { flexWrap: 'nowrap' } },
         h('input', { type: 'color', value: theme.accentColor || DEFAULT_ACCENT, oninput: set('accentColor') }),
         h('button', { class: 'btn ghost sm', onclick: () => { theme.accentColor = DEFAULT_ACCENT; markDirty(); draw(); } }, 'Prusa-Orange')))),
@@ -119,7 +119,10 @@ function presetCard() {
           type: 'text', value: preset.name,
           oninput: (e) => { preset.name = e.target.value; if (preset.isNew) preset.id = slugify(e.target.value) || preset.id; editId = preset.id; markDirty(); },
         })),
-        field('Layout', segmented([['bar', 'Leiste unten'], ['card', 'Karte']], preset.layout, (v) => { preset.layout = v; markDirty(); }))),
+        field('Layout', segmented([['bar', 'Leiste unten'], ['card', 'Karte']], preset.layout, (v) => { preset.layout = v; markDirty(); draw(); }))),
+      preset.layout === 'card' ? h('div', { class: 'grid2' },
+        field('Größe der Karte', scaleSlider(preset.scale || 1, (v) => { preset.scale = v; markDirty(); })),
+        field('Position', select(CARD_POSITIONS, preset.position || 'tl', (v) => { preset.position = v; markDirty(); }))) : null,
       field('Eigene Akzentfarbe', h('div', { class: 'row', style: { flexWrap: 'nowrap' } },
         h('label', { class: 'check' },
           h('input', {
@@ -179,6 +182,8 @@ function previewUrl() {
   return buildOverlayUrl('', {
     printer: linkPrinter,
     layout: preset.layout,
+    scale: preset.scale,
+    position: preset.position,
     sections: preset === STANDARD ? SECTION_KEYS : sections,
     accent: preset.accentColor || theme.accentColor,
     brand: theme.brandText || ' ',

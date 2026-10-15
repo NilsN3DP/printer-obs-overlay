@@ -11,6 +11,7 @@ const HEX_COLOR = /^#[0-9a-f]{6}$/i;
 export const SOCIAL_KEYS = ['youtube', 'instagram', 'tiktok', 'twitch', 'website'];
 export const DEFAULT_ACCENT = '#fa6831';
 const DEMO_ID = 'demo';
+export const CARD_POSITIONS = ['tl', 'tr', 'bl', 'br'];
 
 const str = (value, max = 200) => String(value ?? '').trim().slice(0, max);
 const clampNumber = (value, min, max, fallback) => {
@@ -63,6 +64,9 @@ export function normalizePresets(presets) {
       id,
       name: str(p?.name || id, 60),
       layout: p?.layout === 'card' ? 'card' : 'bar',
+      // Nur fuer die Karte: Groesse (0.5 - 3) und Ecke (tl, tr, bl, br).
+      scale: clampNumber(p?.scale, 0.5, 3, 1),
+      position: CARD_POSITIONS.includes(p?.position) ? p.position : 'tl',
       sections: Array.isArray(p?.sections) ? p.sections.map((s) => str(s, 30)).filter(Boolean) : [],
       accentColor: HEX_COLOR.test(String(p?.accentColor || '')) ? String(p.accentColor).toLowerCase() : '',
       brandText: str(p?.brandText, 32),

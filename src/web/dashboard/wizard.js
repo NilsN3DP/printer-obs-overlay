@@ -1,7 +1,7 @@
 // Einrichtungsassistent beim ersten Start: Drucker -> Aussehen -> OBS.
 import { DEFAULT_ACCENT, SECTION_KEYS, SOCIALS, buildOverlayUrl } from '../shared/sections.js';
 import { api } from './api.js';
-import { TYPE_LABELS, copyText, field, h, segmented, select, slugify, toast } from './ui.js';
+import { TYPE_LABELS, copyText, discoveredLabel, field, h, scaleSlider, segmented, select, slugify, toast } from './ui.js';
 
 const STEPS = ['Willkommen', 'Drucker', 'Aussehen', 'In OBS'];
 
@@ -21,6 +21,7 @@ export function openWizard(app, onDone) {
     searching: false,
     theme: { ...app.config.theme, socials: [...(app.config.theme.socials || [])] },
     layout: 'bar',
+    scale: 1,
     keepDemo: false,
   };
 
@@ -53,10 +54,7 @@ export function openWizard(app, onDone) {
     try {
       const { subnets } = await api.subnets();
       const results = [];
-      for (const cidr of subnets.slice(0, 2)) {
-        const { found } = await api.discover(cidr);
-        results.push(...found);
-      }
+      if (subnets[0]) results.push(...(await api.discover(subnets[0])).found);
       state.found = results;
     } catch (err) {
       state.found = [];
@@ -71,7 +69,8 @@ export function openWizard(app, onDone) {
     const p = state.printer;
     p.type = item.type;
     p.host = item.host;
-    if (!p.name) p.name = TYPE_LABELS[item.type];
+    p.name = item.name || p.name || TYPE_LABELS[item.type];
+    if (item.model && item.model !== 'custom') p.model = item.model;
     state.tested = null;
     draw();
   }
@@ -99,12 +98,12 @@ export function openWizard(app, onDone) {
         h('strong', {}, 'Im Netzwerk gefunden'),
         h('button', { class: 'btn sm', disabled: state.searching, onclick: search }, state.searching ? 'Suche läuft …' : 'Erneut suchen')),
       state.searching
-        ? h('p', { class: 'muted small' }, 'Durchsuche dein Netzwerk nach PrusaLink, OctoPrint und Klipper … (ca. 15 Sekunden)')
+        ? h('p', { class: 'muted small' }, 'Durchsuche dein Netzwerk nach PrusaLink, OctoPrint und Klipper … (einige Sekunden)')
         : state.found?.length
           ? h('div', { class: 'discover-list' }, state.found.map((item) => h('button', {
             class: `discover-item pick${item.host === p.host ? ' active' : ''}`,
             onclick: () => pick(item),
-          }, h('span', {}, h('strong', {}, TYPE_LABELS[item.type]), ` · ${item.host}`), h('span', { class: 'muted small' }, 'auswählen'))))
+          }, discoveredLabel(item, models), h('span', { class: 'muted small' }, 'auswählen'))))
           : h('p', { class: 'muted small' }, state.found ? 'Nichts gefunden – trag die Adresse unten von Hand ein.' : ''));
   }
 
@@ -145,7 +144,7 @@ export function openWizard(app, onDone) {
         field('Adresse (IP oder Hostname)', h('input', { type: 'text', value: p.host, placeholder: 'z. B. 192.168.1.50', oninput: set('host') }))),
       h('div', { class: 'grid2' },
         field('Modell', select(models.map((m) => [m.id, m.name]), p.model, set('model')), 'Bei INDX und XL erscheinen Toolwechsel und Slots.'),
-        field('Anzeigename', h('input', { type: 'text', value: p.name, placeholder: 'z. B. Werkstatt links', oninput: set('name') }))),
+        field('Name des Druckers', h('input', { type: 'text', value: p.name, placeholder: 'z. B. Werkstatt links', oninput: set('name') }))),
       ...auth,
       h('div', { class: 'row' }, h('button', { class: 'btn', onclick: test }, 'Verbindung testen')),
       result,
@@ -161,6 +160,7 @@ export function openWizard(app, onDone) {
     const url = buildOverlayUrl('', {
       printer: 'demo',
       layout: state.layout,
+      scale: state.scale,
       sections: SECTION_KEYS,
       accent: state.theme.accentColor,
       brand: state.theme.brandText || ' ',
@@ -184,8 +184,8 @@ export function openWizard(app, onDone) {
       h('p', { class: 'sub' }, 'Alles lässt sich später unter „Overlay & OBS" ändern. Die Vorschau zeigt Beispieldaten.'),
       preview,
       h('div', { class: 'grid2', style: { marginTop: '16px' } },
-        field('Kanalname (optional)', h('input', {
-          type: 'text', maxLength: 32, value: t.brandText, placeholder: 'Dein Kanalname',
+        field('Anzeigename (optional)', h('input', {
+          type: 'text', maxLength: 32, value: t.brandText, placeholder: 'Dein Name im Overlay',
           oninput: (e) => { t.brandText = e.target.value; refresh(); },
         }), 'Ein Unterstrich färbt den Teil danach in der Akzentfarbe.'),
         field('Akzentfarbe', h('div', { class: 'row', style: { flexWrap: 'nowrap' } },
@@ -203,8 +203,11 @@ export function openWizard(app, onDone) {
                 refresh();
               },
             }), s.label)))),
-        field('Layout', segmented([['bar', 'Leiste unten'], ['card', 'Karte']], state.layout, (v) => { state.layout = v; refresh(); }),
-          'Leiste: über die ganze Breite mit Rahmen. Karte: frei platzierbar.')),
+        field('Layout', segmented([['bar', 'Leiste unten'], ['card', 'Karte']], state.layout, (v) => { state.layout = v; draw(); }),
+          'Leiste: über die ganze Breite mit Rahmen. Karte: kompakt in einer Ecke.')),
+      state.layout === 'card'
+        ? field('Größe der Karte', scaleSlider(state.scale, (v) => { state.scale = v; refresh(); }), 'Position und Größe lassen sich später unter „Overlay & OBS" ändern.')
+        : null,
     ];
   }
 
@@ -255,7 +258,7 @@ export function openWizard(app, onDone) {
     let presetId = '';
     if (state.layout === 'card') {
       presetId = 'karte';
-      if (!presets.some((p) => p.id === 'karte')) presets.push({ id: 'karte', name: 'Karte', layout: 'card', sections: [...SECTION_KEYS] });
+      if (!presets.some((p) => p.id === 'karte')) presets.push({ id: 'karte', name: 'Karte', layout: 'card', scale: state.scale, sections: [...SECTION_KEYS] });
     }
     if (hasPrinter) {
       const p = state.printer;

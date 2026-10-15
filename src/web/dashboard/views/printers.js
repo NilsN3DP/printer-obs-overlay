@@ -1,6 +1,6 @@
 // Drucker einrichten: Liste, Formular, Verbindungstest und Netzwerksuche.
 import { api } from '../api.js';
-import { TYPE_LABELS, confirmDialog, field, h, select, slugify, toast } from '../ui.js';
+import { TYPE_LABELS, confirmDialog, discoveredLabel, field, h, select, slugify, toast } from '../ui.js';
 
 let app;
 let draft = []; // Arbeitskopie der Drucker
@@ -91,18 +91,23 @@ function discoverCard() {
 
   async function run() {
     button.disabled = true;
-    results.replaceChildren(h('p', { class: 'muted small' }, 'Durchsuche das Netzwerk … (ca. 10–20 Sekunden)'));
+    results.replaceChildren(h('p', { class: 'muted small' }, 'Durchsuche das Netzwerk … (einige Sekunden)'));
     try {
       const { found, cidr: used } = await api.discover(cidr.value.trim());
       const known = new Set(draft.map((p) => p.host));
       results.replaceChildren(...(found.length ? found.map((item) => h('div', { class: 'discover-item' },
-        h('span', {}, h('strong', {}, TYPE_LABELS[item.type]), ` · ${item.host}`),
+        discoveredLabel(item, app.config.printerModels),
         known.has(item.host)
           ? h('span', { class: 'muted small' }, 'bereits eingerichtet')
           : h('button', {
             class: 'btn sm',
             onclick: () => {
-              newPrinter({ type: item.type, host: item.host, name: `${TYPE_LABELS[item.type]} ${item.host.split('.').pop()}` });
+              newPrinter({
+                type: item.type,
+                host: item.host,
+                name: item.name || `${TYPE_LABELS[item.type]} ${item.host.split('.').pop()}`,
+                model: item.model || 'custom',
+              });
               draw();
             },
           }, 'Übernehmen'))) : [h('p', { class: 'muted small' }, `Keine Drucker in ${used} gefunden.`)]));

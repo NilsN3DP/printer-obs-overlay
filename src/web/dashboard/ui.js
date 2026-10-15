@@ -115,3 +115,21 @@ export function confirmDialog(message, { ok = 'OK', danger = false } = {}) {
     okButton.focus();
   });
 }
+
+/** Schieberegler fuer die Kartengroesse (50-300 %), mit Prozentanzeige. */
+export function scaleSlider(value, onchange) {
+  const out = h('span', { class: 'muted small', style: { width: '48px', textAlign: 'right' } }, `${Math.round(value * 100)} %`);
+  const range = h('input', {
+    type: 'range', min: '0.5', max: '3', step: '0.05', value: String(value), style: { flex: '1' },
+    oninput: (e) => { out.textContent = `${Math.round(Number(e.target.value) * 100)} %`; onchange(Number(e.target.value)); },
+  });
+  return h('div', { class: 'row', style: { flexWrap: 'nowrap' } }, range, out);
+}
+
+/** Anzeige eines Suchtreffers: "prusa-core-one-l · Prusa Core One L · 192.168.1.10". */
+export function discoveredLabel(item, models = []) {
+  const model = item.model && item.model !== 'custom' ? models.find((m) => m.id === item.model)?.name : null;
+  return h('span', {},
+    h('strong', {}, item.name || TYPE_LABELS[item.type]),
+    ` · ${[model || TYPE_LABELS[item.type], item.host].join(' · ')}`);
+}

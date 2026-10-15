@@ -75,7 +75,7 @@ erneut starten. Alles Weitere:
    (meist `maker`) und Passwort vom Druckerdisplay unter *Einstellungen → Netzwerk → PrusaLink*.
    Für INDX/XL das passende Modell wählen – dann erscheinen die Toolchanger-Bereiche. Tools,
    Farben und Materialien kommen automatisch aus der Druckdatei.
-2. **Overlay & OBS:** Kanalname, Akzentfarbe und Social-Symbole festlegen. Unter
+2. **Overlay & OBS:** Anzeigename, Akzentfarbe und Social-Symbole festlegen. Unter
    *Overlay-Varianten* Layout (Leiste unten oder Karte) und Bereiche wählen; die Vorschau
    zeigt Änderungen vor dem Speichern. Jedem Drucker wird unter *Drucker* eine Variante
    zugewiesen.

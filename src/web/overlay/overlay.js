@@ -37,6 +37,10 @@ async function loadAppearance() {
 
   const layout = params.get('layout') || preset?.layout || 'bar';
   document.body.classList.toggle('layout-card', layout === 'card');
+  const scale = Math.min(3, Math.max(0.5, Number(params.get('scale') || preset?.scale || 1) || 1));
+  document.documentElement.style.setProperty('--card-scale', String(scale));
+  const position = params.get('position') || preset?.position || 'tl';
+  for (const pos of ['tl', 'tr', 'bl', 'br']) document.body.classList.toggle(`pos-${pos}`, pos === position);
 
   activeSections = new Set(params.has('sections') ? list(params.get('sections'))
     : preset?.sections?.length ? preset.sections : SECTION_KEYS);

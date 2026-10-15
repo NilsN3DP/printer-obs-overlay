@@ -37,15 +37,20 @@ export const SOCIALS = [
 
 export const DEFAULT_ACCENT = '#fa6831';
 
+/** Ecken fuer die Karte. */
+export const CARD_POSITIONS = [['tl', 'Oben links'], ['tr', 'Oben rechts'], ['bl', 'Unten links'], ['br', 'Unten rechts']];
+
 /**
  * Baut die Overlay-URL. Nur Abweichungen vom Standard landen in den Parametern,
  * damit der Link kurz bleibt; alles andere kommt aus dem zugewiesenen Preset.
  */
-export function buildOverlayUrl(base, { printer, preset, layout, sections, accent, brand, socials } = {}) {
+export function buildOverlayUrl(base, { printer, preset, layout, scale, position, sections, accent, brand, socials } = {}) {
   const params = new URLSearchParams();
   if (printer) params.set('printer', printer);
   if (preset) params.set('preset', preset);
   if (layout) params.set('layout', layout);
+  if (layout === 'card' && scale && Number(scale) !== 1) params.set('scale', String(scale));
+  if (layout === 'card' && position && position !== 'tl') params.set('position', position);
   if (Array.isArray(sections)) params.set('sections', sections.length ? sections.join(',') : 'none');
   if (accent) params.set('accent', accent);
   if (brand != null && brand !== '') params.set('brand', brand);
