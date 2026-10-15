@@ -1,6 +1,6 @@
 // Drucker einrichten: Liste, Formular, Verbindungstest und Netzwerksuche.
 import { api } from '../api.js';
-import { TYPE_LABELS, confirmDialog, discoveredLabel, field, h, select, slugify, toast } from '../ui.js';
+import { TYPE_LABELS, allowedModel, confirmDialog, discoveredLabel, field, h, modelOptions, select, slugify, toast } from '../ui.js';
 
 let app;
 let draft = []; // Arbeitskopie der Drucker
@@ -106,7 +106,7 @@ function discoverCard() {
                 type: item.type,
                 host: item.host,
                 name: item.name || `${TYPE_LABELS[item.type]} ${item.host.split('.').pop()}`,
-                model: item.model || 'custom',
+                model: allowedModel(app.config.printerModels || [], app.hasToolchanger(), item.model),
               });
               draw();
             },
@@ -205,7 +205,8 @@ function formCard() {
   }
 
   const presetOptions = [['', 'Standard (alle Bereiche, Leiste)'], ...(app.config.presets || []).map((pr) => [pr.id, pr.name])];
-  const modelOptions = (app.config.printerModels || []).map((m) => [m.id, m.name]);
+  const models = modelOptions(app.config.printerModels || [], app.hasToolchanger(), p.model);
+  const toolchanger = model.toolchanger && app.hasToolchanger();
 
   return h('div', { class: 'card' },
     h('div', { class: 'row between', style: { marginBottom: '16px' } },
@@ -213,18 +214,18 @@ function formCard() {
       h('button', { class: 'btn danger sm', onclick: remove }, 'Entfernen')),
     h('div', { class: 'grid2' },
       field('Name', h('input', { type: 'text', value: p.name, placeholder: 'z. B. Werkstatt links', oninput: update('name') })),
-      field('Modell', select(modelOptions, p.model, (v) => update('model', true)(v)))),
+      field('Modell', select(models, p.model, (v) => update('model', true)(v)))),
     h('div', { class: 'grid2' },
       field('Verbindung', select(Object.entries(TYPE_LABELS).filter(([k]) => k !== 'demo'), p.type, (v) => update('type', true)(v))),
       field('Adresse (IP oder Hostname)', h('input', { type: 'text', value: p.host, placeholder: 'z. B. 192.168.1.50', oninput: update('host') }))),
     ...authFields(p),
     h('div', { class: 'grid2' },
       field('Overlay-Variante', select(presetOptions, p.presetId, (v) => update('presetId')(v)), 'Bestimmt Layout & Bereiche im OBS-Overlay.'),
-      model.toolchanger ? field('Abfall pro Wechsel (g, Fallback)', h('input', {
+      toolchanger ? field('Abfall pro Wechsel (g, Fallback)', h('input', {
         type: 'number', step: '0.001', min: '0', value: p.wasteGramsPerChange || 0,
         oninput: (e) => { p.wasteGramsPerChange = Number(e.target.value) || 0; markDirty(); },
       }), 'Nur nötig, wenn die Druckdatei keine Werte liefert.') : null),
-    model.toolchanger ? h('p', { class: 'muted small' },
+    toolchanger ? h('p', { class: 'muted small' },
       'Tools, Farben und Materialien liest das Overlay automatisch aus der laufenden Druckdatei.') : null,
     h('details', { style: { marginTop: '14px' } },
       h('summary', { class: 'muted small', style: { cursor: 'pointer' } }, 'Erweitert'),

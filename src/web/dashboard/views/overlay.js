@@ -173,7 +173,9 @@ function sectionPicker(preset) {
             },
           }), s.label))));
     })),
-    toolchanger ? h('span', { class: 'hint' }, 'Toolchanger-Bereiche erscheinen nur bei INDX- und XL-Druckern.') : null);
+    toolchanger
+      ? h('span', { class: 'hint' }, 'Toolchanger-Bereiche erscheinen nur bei INDX- und XL-Druckern.')
+      : h('span', { class: 'hint' }, 'Toolchanger-Bereiche (INDX/XL) lassen sich unter System aktivieren.'));
 }
 
 // ---------- Vorschau ----------

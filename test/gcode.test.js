@@ -86,3 +86,16 @@ test('Slots werden aus der Druckdatei abgeleitet', async () => {
   assert.deepEqual(slots[1], { slot: 2, material: 'PETG', color: '#00ff00', empty: false });
   assert.equal(slots[3].empty, true);
 });
+
+test('Ohne Toolchanger-Freigabe keine Slot-Leiste und kein Swapping', async () => {
+  const { Enricher } = await import('../src/server/telemetry/enrich.js');
+  const meta = parseFile(sample);
+  const metaService = { get: () => meta, status: () => ({ state: 'ready' }) };
+  const state = { printer: { state: 'PRINTING', temp_nozzle: 180, target_nozzle: 215 }, job: { progress: 20, time_remaining: 13 * 60 } };
+  const cfg = { id: 'p', model: 'coreone-indx' };
+  const off = new Enricher({ metaService, toolchangerEnabled: () => false }).enrich(cfg, state);
+  assert.equal(off.printer.filament_slots, undefined);
+  assert.equal(off.printer.swap_in_progress, false);
+  const on = new Enricher({ metaService, toolchangerEnabled: () => true }).enrich(cfg, state);
+  assert.equal(on.printer.filament_slots.length, 8);
+});

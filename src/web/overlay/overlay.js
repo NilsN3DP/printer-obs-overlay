@@ -16,6 +16,7 @@ let printerId = params.get('printer') || '';
 let activeSections = new Set(SECTION_KEYS);
 let brandEmpty = false; // weder Name noch Logo noch Social-Symbole -> Block ausblenden
 let frameOn = true; // Eckrahmen global abschaltbar (Branding)
+let toolchangerOn = true; // Toolchanger-Funktionen unter System eingeschaltet?
 const editMode = params.get('edit') === '1';
 const CARD_DEFAULT = { x: 1.25, y: 2.22 }; // 24 px Abstand bei 1920 x 1080
 
@@ -50,6 +51,7 @@ async function loadAppearance() {
   };
   placeCard(position, offset('ox', 'offsetX', CARD_DEFAULT.x), offset('oy', 'offsetY', CARD_DEFAULT.y));
   frameOn = params.has('frame') ? params.get('frame') !== '0' : theme.showFrame !== false;
+  toolchangerOn = config ? config.toolchangerEnabled === true : true;
 
   activeSections = new Set(params.has('sections') ? list(params.get('sections'))
     : preset?.sections?.length ? preset.sections : SECTION_KEYS);
@@ -233,7 +235,7 @@ function render(data) {
   const done = num(p.filament_changes);
   const totalChanges = num(p.filament_changes_total);
   const hasToolData = (totalChanges ?? 0) > 0 || (done ?? 0) > 0 || (num(p.tools_total) ?? 0) > 1;
-  TOOLCHANGE_KEYS.forEach((key) => document.querySelector(`[data-section="${key}"]`)?.classList.toggle('no-data', !hasToolData));
+  TOOLCHANGE_KEYS.forEach((key) => document.querySelector(`[data-section="${key}"]`)?.classList.toggle('no-data', !toolchangerOn || !hasToolData));
   set('changes', totalChanges !== null ? `${done ?? 0} / ${totalChanges}` : done !== null ? String(done) : '–');
   set('tool', num(p.tool) !== null ? `T${p.tool}${num(p.tools_total) ? ` / ${p.tools_total}` : ''}` : '–');
   renderSlots(p.filament_slots || [], num(p.tool));

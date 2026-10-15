@@ -1,7 +1,7 @@
 // Einrichtungsassistent beim ersten Start: Drucker -> Aussehen -> OBS.
 import { DEFAULT_ACCENT, SECTION_KEYS, SOCIALS, buildOverlayUrl } from '../shared/sections.js';
 import { api } from './api.js';
-import { TYPE_LABELS, cardControls, copyText, discoveredLabel, field, h, segmented, select, slugify, toast } from './ui.js';
+import { TYPE_LABELS, allowedModel, cardControls, copyText, discoveredLabel, field, h, modelOptions, segmented, select, slugify, toast } from './ui.js';
 
 const STEPS = ['Willkommen', 'Drucker', 'Aussehen', 'In OBS'];
 
@@ -82,7 +82,7 @@ export function openWizard(app, onDone) {
     p.type = item.type;
     p.host = item.host;
     p.name = item.name || p.name || TYPE_LABELS[item.type];
-    if (item.model && item.model !== 'custom') p.model = item.model;
+    if (item.model && item.model !== 'custom') p.model = allowedModel(models, app.hasToolchanger(), item.model);
     state.tested = null;
     draw();
   }
@@ -155,7 +155,8 @@ export function openWizard(app, onDone) {
         field('Verbindung', select(Object.entries(TYPE_LABELS).filter(([k]) => k !== 'demo'), p.type, set('type', true))),
         field('Adresse (IP oder Hostname)', h('input', { type: 'text', value: p.host, placeholder: 'z. B. 192.168.1.50', oninput: set('host') }))),
       h('div', { class: 'grid2' },
-        field('Modell', select(models.map((m) => [m.id, m.name]), p.model, set('model')), 'Bei INDX und XL erscheinen Toolwechsel und Slots.'),
+        field('Modell', select(modelOptions(models, app.hasToolchanger(), p.model), p.model, set('model')),
+          app.hasToolchanger() ? 'Bei INDX und XL erscheinen Toolwechsel und Slots.' : 'Toolchanger (INDX/XL) lassen sich später unter System aktivieren.'),
         field('Name des Druckers', h('input', { type: 'text', value: p.name, placeholder: 'z. B. Werkstatt links', oninput: set('name') }))),
       ...auth,
       h('div', { class: 'row' }, h('button', { class: 'btn', onclick: test }, 'Verbindung testen')),

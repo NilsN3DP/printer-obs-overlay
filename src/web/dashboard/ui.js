@@ -144,6 +144,21 @@ export function cardControls(target, onchange) {
       h('span', { class: 'hint' }, 'Oder die Karte in der Vorschau mit der Maus an die gewünschte Stelle ziehen.')));
 }
 
+/**
+ * Modellauswahl: Toolchanger-Modelle nur, wenn unter System eingeschaltet. Ein bereits
+ * gespeichertes Toolchanger-Modell bleibt sichtbar, damit nichts verloren geht.
+ */
+export function modelOptions(models, toolchangerEnabled, current) {
+  return models.filter((m) => toolchangerEnabled || !m.toolchanger || m.id === current).map((m) => [m.id, m.name]);
+}
+
+/** Modell aus der Netzwerksuche passend zur Einstellung (INDX -> Core One usw.). */
+export function allowedModel(models, toolchangerEnabled, id) {
+  const model = models.find((m) => m.id === id);
+  if (!model) return 'custom';
+  return model.toolchanger && !toolchangerEnabled ? model.base || 'custom' : model.id;
+}
+
 /** Anzeige eines Suchtreffers: "prusa-core-one-l · Prusa Core One L · 192.168.1.10". */
 export function discoveredLabel(item, models = []) {
   const model = item.model && item.model !== 'custom' ? models.find((m) => m.id === item.model)?.name : null;

@@ -112,3 +112,9 @@ test('Ersteinrichtung: neu = offen, alte Konfiguration mit Druckern = erledigt',
   assert.equal(normalizeConfig({}).theme.brandText, '');
   assert.deepEqual(normalizeConfig({}).theme.socials, []);
 });
+
+test('Toolchanger-Funktionen sind aus, bis sie bewusst eingeschaltet werden', () => {
+  const withIndx = normalizeConfig({ printers: [{ id: 'indx', host: 'x', model: 'coreone-indx' }] });
+  assert.equal(withIndx.toolchangerEnabled, false);
+  assert.equal(normalizeConfig({ toolchangerEnabled: true }).toolchangerEnabled, true);
+});

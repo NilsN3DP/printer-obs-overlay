@@ -32,8 +32,13 @@ export const app = {
   baseUrl() {
     return (app.config?.effectivePublicBaseUrl || location.origin).replace(/\/+$/, '');
   },
+  /** Toolchanger-Funktionen (INDX/XL) unter System eingeschaltet? */
   hasToolchanger() {
-    return (app.config?.printers || []).some((p) => p.capabilities?.toolchanger);
+    return app.config?.toolchangerEnabled === true;
+  },
+  /** Aktuelle Ansicht neu aufbauen (z. B. nach Aenderungen, die die Navigation betreffen). */
+  rerender() {
+    render();
   },
   /** Einrichtungsassistent (erneut) starten. */
   wizard() {
@@ -48,7 +53,8 @@ const container = document.getElementById('view');
 
 function currentRoute() {
   const [, view = 'overview', param] = location.hash.split('/');
-  return { view: VIEWS[view] ? view : 'overview', param: param ? decodeURIComponent(param) : null };
+  const allowed = VIEWS[view] && (view !== 'toolchanger' || app.hasToolchanger());
+  return { view: allowed ? view : 'overview', param: param ? decodeURIComponent(param) : null };
 }
 
 function render() {

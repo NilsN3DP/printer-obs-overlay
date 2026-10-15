@@ -7,7 +7,7 @@ Unterstützung für Toolchanger (Core One INDX, XL).
 
 - **Drucker:** PrusaLink (MINI, MK3.5, MK4/S, Core One/L, XL), OctoPrint, Klipper/Moonraker
 - **Overlay:** Fortschritt, Restzeit, Fertig-Uhrzeit, Düse, Bett, Filament mit Farbe, Layer, Speed, Flow, Z, Lüfter
-- **Toolchanger:** aktives Tool, Wechsel x/y, Slot-Leiste mit Farben, Abfallmenge – live aus der Druckdatei berechnet, ohne Spezial-Firmware
+- **Toolchanger (optional):** aktives Tool, Wechsel x/y, Slot-Leiste mit Farben, Abfallmenge – unter *System* einschaltbar
 - **Dashboard im Browser:** Drucker einrichten, Netzwerksuche, Verbindungstest, Overlay-Varianten, Live-Vorschau, OBS-Link
 - **Änderungen erscheinen sofort in OBS** – kein Neuladen der Quelle nötig
 - Läuft als **Docker-Container**, **Windows-App** oder direkt als **OBS-Plugin**
@@ -85,7 +85,11 @@ erneut starten. Alles Weitere:
 
 Der Demo-Drucker (unter *System* ein- und ausschaltbar) zeigt alles mit simulierten INDX-Daten.
 
-### Toolchanger ohne Spezial-Firmware
+### Toolchanger (INDX / XL)
+
+Die Toolchanger-Funktionen sind standardmäßig aus und werden unter *System* eingeschaltet.
+Sie sind aktuell nur mit Custom-Firmware (CFW) oder über die Auswertung der Druckdatei
+nutzbar, da PrusaLink diese Daten nicht liefert.
 
 Bei PrusaLink lädt der Server die laufende Druckdatei (`.gcode`/`.bgcode`) einmal vom
 Drucker und berechnet daraus aktives Tool, Wechsel, Layer und Abfall. PrusaLink liefert

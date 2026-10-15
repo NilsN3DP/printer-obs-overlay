@@ -127,6 +127,9 @@ export function normalizeConfig(raw = {}) {
     demoMode: Boolean(raw.demoMode),
     // Ersteinrichtung erledigt? Alte Konfigurationen mit Druckern gelten als eingerichtet.
     setupDone: typeof raw.setupDone === 'boolean' ? raw.setupDone : printers.length > 0,
+    // Toolchanger-Funktionen (INDX/XL) muessen bewusst eingeschaltet werden: PrusaLink liefert
+    // diese Daten nicht, sie kommen nur aus Custom-Firmware oder der Auswertung der Druckdatei.
+    toolchangerEnabled: raw.toolchangerEnabled === true,
     wasteGramsPerChange: clampNumber(raw.wasteGramsPerChange, 0, 100, 0),
     theme: normalizeTheme(raw.theme),
     presets: normalizePresets(raw.presets),
@@ -134,9 +137,9 @@ export function normalizeConfig(raw = {}) {
   };
 }
 
-function demoPrinter() {
+function demoPrinter(toolchanger) {
   return {
-    ...normalizePrinter({ id: DEMO_ID, name: 'Demo-Drucker', type: 'demo', model: 'coreone-indx' }),
+    ...normalizePrinter({ id: DEMO_ID, name: 'Demo-Drucker', type: 'demo', model: toolchanger ? 'coreone-indx' : 'coreone' }),
     wasteGramsPerChange: 0.022,
     slots: normalizeSlots([
       { slot: 1, brand: 'Prusament', name: 'Galaxy Black', material: 'PLA', color: '#2b2b2b' },
@@ -217,7 +220,7 @@ export class ConfigStore extends EventEmitter {
 
   /** Alle abzufragenden Drucker inkl. virtuellem Demo-Drucker. */
   get printers() {
-    return this.current.demoMode ? [...this.current.printers, demoPrinter()] : this.current.printers;
+    return this.current.demoMode ? [...this.current.printers, demoPrinter(this.current.toolchangerEnabled)] : this.current.printers;
   }
 
   printer(id) {
@@ -250,6 +253,7 @@ export class ConfigStore extends EventEmitter {
       publicBaseUrl: c.publicBaseUrl,
       demoMode: c.demoMode,
       setupDone: c.setupDone,
+      toolchangerEnabled: c.toolchangerEnabled,
       wasteGramsPerChange: c.wasteGramsPerChange,
       theme: c.theme,
       presets: c.presets,

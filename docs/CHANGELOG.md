@@ -14,6 +14,7 @@ Komplett neu aufgebaut – gleiche Funktionen, einfacher zu installieren und zu 
 - Datei-Check zeigt Abfall pro Wechsel und übernimmt ihn auf Wunsch als Fallback
 - Slot-Leiste wird aus der Druckdatei abgeleitet – kein manueller Slotplan mehr nötig
 - Karte: Größe einstellbar und in der Vorschau frei verschiebbar; Eckrahmen abschaltbar
+- Toolchanger-Funktionen (INDX/XL) als Option unter System, standardmäßig aus
 - Keine Vorbelegung mit Anzeigename oder Social-Symbolen
 - Fortschrittsanzeige beim Laden der Druckdatei vom Drucker
 - Autostart für die Windows-App (im Installer oder unter System)

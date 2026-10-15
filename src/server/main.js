@@ -36,7 +36,11 @@ async function main() {
     legacyCacheDirs: [path.join(runtime.dataDir, 'meta-cache')], // Cache aus Version 1
     logger,
   });
-  const enricher = new Enricher({ metaService, globalWaste: () => store.config.wasteGramsPerChange });
+  const enricher = new Enricher({
+    metaService,
+    globalWaste: () => store.config.wasteGramsPerChange,
+    toolchangerEnabled: () => store.config.toolchangerEnabled,
+  });
   const poller = new Poller({ store, metaService, enricher });
   const server = createApp({ runtime, store, poller, logger });
 

@@ -12,13 +12,35 @@ export function render(container, app) {
     publicBaseUrl: c.publicBaseUrl,
     demoMode: c.demoMode,
     wasteGramsPerChange: c.wasteGramsPerChange,
+    toolchangerEnabled: c.toolchangerEnabled === true,
   };
 
   async function save() {
     const pollIntervalMs = Math.round(Number(form.pollSeconds) * 1000);
     if (!(pollIntervalMs >= 500 && pollIntervalMs <= 60000)) return toast('Abfrage-Intervall: 0,5 bis 60 Sekunden.', 'bad');
     const printers = c.printers.filter((p) => !p.virtual).map((p) => ({ ...p, originalId: p.id }));
-    await app.save({ ...app.config, ...form, pollIntervalMs, printers }, 'Einstellungen gespeichert');
+    if (await app.save({ ...app.config, ...form, pollIntervalMs, printers }, 'Einstellungen gespeichert')) app.rerender();
+  }
+
+  function toolchangerCard() {
+    const waste = field('Abfall pro Wechsel (g, global)', h('input', {
+      type: 'number', min: '0', step: '0.001', value: form.wasteGramsPerChange,
+      oninput: (e) => { form.wasteGramsPerChange = Number(e.target.value) || 0; },
+    }), 'Letzter Fallback, wenn weder Druckdatei noch Drucker einen Wert liefern.');
+    waste.classList.toggle('hidden', !form.toolchangerEnabled);
+    return h('div', { class: 'card' },
+      h('h2', {}, 'Toolchanger (INDX / XL)'),
+      h('p', { class: 'sub' }, 'Toolwechsel, aktives Tool, Slot-Leiste und Abfall im Overlay sowie die Datei-Analyse.'),
+      h('div', { class: 'notice warn', style: { marginBottom: '14px' } },
+        'Aktuell nur mit Custom-Firmware (CFW) oder über die Auswertung der Druckdatei nutzbar, da PrusaLink diese Daten nicht liefert.'),
+      h('label', { class: 'check', style: { marginBottom: '14px' } },
+        h('input', {
+          type: 'checkbox',
+          checked: form.toolchangerEnabled,
+          onchange: (e) => { form.toolchangerEnabled = e.target.checked; waste.classList.toggle('hidden', !e.target.checked); },
+        }),
+        'Toolchanger-Funktionen aktivieren'),
+      waste);
   }
 
   const autostart = sys.autostart?.supported ? h('div', { class: 'card' },
@@ -77,10 +99,7 @@ export function render(container, app) {
               type: 'number', min: '0.5', max: '60', step: '0.5', value: form.pollSeconds,
               oninput: (e) => { form.pollSeconds = e.target.value; },
             }), 'Wie oft die Drucker abgefragt werden. 1–2 s sind ideal.'),
-            field('Abfall pro Wechsel (g, global)', h('input', {
-              type: 'number', min: '0', step: '0.001', value: form.wasteGramsPerChange,
-              oninput: (e) => { form.wasteGramsPerChange = Number(e.target.value) || 0; },
-            }), 'Letzter Fallback, wenn weder Datei noch Drucker Werte haben.')),
+            null),
           field('Öffentliche Adresse für OBS-Links (optional)', h('input', {
             type: 'text',
             value: form.publicBaseUrl,
@@ -93,6 +112,7 @@ export function render(container, app) {
           h('label', { class: 'check', style: { marginTop: '4px' } },
             h('input', { type: 'checkbox', checked: form.demoMode, onchange: (e) => { form.demoMode = e.target.checked; } }),
             'Demo-Drucker anzeigen (simuliert einen INDX-Druck)')),
+        toolchangerCard(),
         autostart),
       h('div', { class: 'stack' },
         h('div', { class: 'card' },

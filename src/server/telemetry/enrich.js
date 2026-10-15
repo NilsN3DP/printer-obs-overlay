@@ -31,9 +31,10 @@ export function slotsFromMeta(meta, modelSlots = 0) {
 
 export class Enricher {
   /** @param {{metaService: import('./job-meta.js').JobMetaService, globalWaste: () => number}} deps */
-  constructor({ metaService, globalWaste = () => 0 }) {
+  constructor({ metaService, globalWaste = () => 0, toolchangerEnabled = () => true }) {
     this.metaService = metaService;
     this.globalWaste = globalWaste;
+    this.toolchangerEnabled = toolchangerEnabled;
     this.swapTrackers = new Map();
   }
 
@@ -58,8 +59,13 @@ export class Enricher {
       }
     }
 
-    this.applySlots(printerCfg, printer, meta);
-    this.applySwapHeuristic(printerCfg, printer, job, meta);
+    if (this.toolchangerEnabled()) {
+      this.applySlots(printerCfg, printer, meta);
+      this.applySwapHeuristic(printerCfg, printer, job, meta);
+    } else {
+      delete printer.filament_slots;
+      printer.swap_in_progress = false;
+    }
     if (!printer.filament_display && printer.material) printer.filament_display = printer.material;
     return { ...state, printer, meta: this.metaService.status(printerCfg.id) };
   }

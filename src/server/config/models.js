@@ -11,11 +11,11 @@ export const PRINTER_MODELS = [
   { id: 'mk4s', name: 'Prusa MK4S', toolchanger: false, indx: false, xl: false, slots: 0 },
   { id: 'coreone', name: 'Prusa Core One', toolchanger: false, indx: false, xl: false, slots: 0 },
   { id: 'coreone-l', name: 'Prusa Core One L', toolchanger: false, indx: false, xl: false, slots: 0 },
-  { id: 'coreone-indx', name: 'Prusa Core One INDX', toolchanger: true, indx: true, xl: false, slots: 8 },
-  { id: 'coreone-l-indx', name: 'Prusa Core One L INDX', toolchanger: true, indx: true, xl: false, slots: 8 },
+  { id: 'coreone-indx', name: 'Prusa Core One INDX', toolchanger: true, indx: true, xl: false, slots: 8, base: 'coreone' },
+  { id: 'coreone-l-indx', name: 'Prusa Core One L INDX', toolchanger: true, indx: true, xl: false, slots: 8, base: 'coreone-l' },
   { id: 'xl-1t', name: 'Prusa XL 1 Tool', toolchanger: false, indx: false, xl: true, slots: 0 },
-  { id: 'xl-2t', name: 'Prusa XL 2 Tool', toolchanger: true, indx: false, xl: true, slots: 2 },
-  { id: 'xl-5t', name: 'Prusa XL 5 Tool', toolchanger: true, indx: false, xl: true, slots: 5 },
+  { id: 'xl-2t', name: 'Prusa XL 2 Tool', toolchanger: true, indx: false, xl: true, slots: 2, base: 'xl-1t' },
+  { id: 'xl-5t', name: 'Prusa XL 5 Tool', toolchanger: true, indx: false, xl: true, slots: 5, base: 'xl-1t' },
 ];
 
 export function modelById(id) {
