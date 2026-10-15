@@ -1,7 +1,7 @@
 // Einrichtungsassistent beim ersten Start: Drucker -> Aussehen -> OBS.
 import { DEFAULT_ACCENT, SECTION_KEYS, SOCIALS, buildOverlayUrl } from '../shared/sections.js';
 import { api } from './api.js';
-import { TYPE_LABELS, copyText, discoveredLabel, field, h, scaleSlider, segmented, select, slugify, toast } from './ui.js';
+import { TYPE_LABELS, cardControls, copyText, discoveredLabel, field, h, segmented, select, slugify, toast } from './ui.js';
 
 const STEPS = ['Willkommen', 'Drucker', 'Aussehen', 'In OBS'];
 
@@ -25,7 +25,7 @@ export function openWizard(app, onDone) {
       ? { ...app.config.theme, socials: [...(app.config.theme.socials || [])] }
       : { ...app.config.theme, brandText: '', logoUrl: '', accentColor: DEFAULT_ACCENT, socials: [] },
     layout: 'bar',
-    scale: 1,
+    card: { scale: 1, position: 'tl', offsetX: null, offsetY: null },
     keepDemo: false,
   };
 
@@ -34,7 +34,15 @@ export function openWizard(app, onDone) {
   backdrop.append(dialog);
   document.body.append(backdrop);
 
+  // Karte in der Vorschau verschoben -> Position merken (Vorschau bleibt stehen).
+  const onMessage = (e) => {
+    if (e.data?.type !== 'printer-overlay:card' || e.source !== dialog.querySelector('iframe')?.contentWindow) return;
+    Object.assign(state.card, { position: e.data.position, offsetX: e.data.offsetX, offsetY: e.data.offsetY });
+  };
+  window.addEventListener('message', onMessage);
+
   const close = () => {
+    window.removeEventListener('message', onMessage);
     backdrop.remove();
     onDone?.();
   };
@@ -164,7 +172,9 @@ export function openWizard(app, onDone) {
     const url = buildOverlayUrl('', {
       printer: 'demo',
       layout: state.layout,
-      scale: state.scale,
+      ...state.card,
+      frame: state.theme.showFrame !== false,
+      edit: true,
       sections: SECTION_KEYS,
       accent: state.theme.accentColor,
       brand: state.theme.brandText || ' ',
@@ -210,8 +220,10 @@ export function openWizard(app, onDone) {
         field('Layout', segmented([['bar', 'Leiste unten'], ['card', 'Karte']], state.layout, (v) => { state.layout = v; draw(); }),
           'Leiste: über die ganze Breite mit Rahmen. Karte: kompakt in einer Ecke.')),
       state.layout === 'card'
-        ? field('Größe der Karte', scaleSlider(state.scale, (v) => { state.scale = v; refresh(); }), 'Position und Größe lassen sich später unter „Overlay & OBS" ändern.')
-        : null,
+        ? cardControls(state.card, () => refresh())
+        : h('label', { class: 'check' },
+          h('input', { type: 'checkbox', checked: t.showFrame !== false, onchange: (e) => { t.showFrame = e.target.checked; refresh(); } }),
+          'Eckrahmen anzeigen'),
     ];
   }
 
@@ -262,7 +274,10 @@ export function openWizard(app, onDone) {
     let presetId = '';
     if (state.layout === 'card') {
       presetId = 'karte';
-      if (!presets.some((p) => p.id === 'karte')) presets.push({ id: 'karte', name: 'Karte', layout: 'card', scale: state.scale, sections: [...SECTION_KEYS] });
+      const card = { id: 'karte', name: 'Karte', layout: 'card', ...state.card, sections: [...SECTION_KEYS] };
+      const index = presets.findIndex((p) => p.id === 'karte');
+      if (index >= 0) presets[index] = { ...presets[index], ...state.card, layout: 'card' };
+      else presets.push(card);
     }
     if (hasPrinter) {
       const p = state.printer;

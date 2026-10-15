@@ -1,4 +1,5 @@
 // Kleine DOM-Helfer. Inhalte werden immer als Text gesetzt (kein innerHTML mit Daten).
+import { CARD_POSITIONS } from '../shared/sections.js';
 
 /**
  * h('div', {class: 'x', onclick: fn}, 'Text', child) – erzeugt ein Element.
@@ -124,6 +125,23 @@ export function scaleSlider(value, onchange) {
     oninput: (e) => { out.textContent = `${Math.round(Number(e.target.value) * 100)} %`; onchange(Number(e.target.value)); },
   });
   return h('div', { class: 'row', style: { flexWrap: 'nowrap' } }, range, out);
+}
+
+/**
+ * Bedienelemente fuer die Karte: Groesse + Ecken-Schnellwahl. Feinplatzierung per Ziehen
+ * in der Vorschau. `target` bekommt scale/position/offsetX/offsetY.
+ */
+export function cardControls(target, onchange) {
+  return h('div', { style: { marginBottom: '14px' } },
+    field('Größe der Karte', scaleSlider(target.scale || 1, (v) => { target.scale = v; onchange(false); })),
+    h('div', { class: 'field' },
+      h('span', {}, 'Position'),
+      h('div', { class: 'row' }, CARD_POSITIONS.map(([id, label]) => h('button', {
+        type: 'button',
+        class: `btn sm${(target.position || 'tl') === id && target.offsetX == null ? ' active-soft' : ''}`,
+        onclick: () => { target.position = id; target.offsetX = null; target.offsetY = null; onchange(true); },
+      }, label))),
+      h('span', { class: 'hint' }, 'Oder die Karte in der Vorschau mit der Maus an die gewünschte Stelle ziehen.')));
 }
 
 /** Anzeige eines Suchtreffers: "prusa-core-one-l · Prusa Core One L · 192.168.1.10". */

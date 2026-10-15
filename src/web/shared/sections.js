@@ -44,17 +44,21 @@ export const CARD_POSITIONS = [['tl', 'Oben links'], ['tr', 'Oben rechts'], ['bl
  * Baut die Overlay-URL. Nur Abweichungen vom Standard landen in den Parametern,
  * damit der Link kurz bleibt; alles andere kommt aus dem zugewiesenen Preset.
  */
-export function buildOverlayUrl(base, { printer, preset, layout, scale, position, sections, accent, brand, socials } = {}) {
+export function buildOverlayUrl(base, { printer, preset, layout, scale, position, offsetX, offsetY, frame, sections, accent, brand, socials, edit } = {}) {
   const params = new URLSearchParams();
   if (printer) params.set('printer', printer);
   if (preset) params.set('preset', preset);
   if (layout) params.set('layout', layout);
   if (layout === 'card' && scale && Number(scale) !== 1) params.set('scale', String(scale));
-  if (layout === 'card' && position && position !== 'tl') params.set('position', position);
+  if (layout === 'card' && position) params.set('position', position);
+  if (layout === 'card' && offsetX != null) params.set('ox', String(offsetX));
+  if (layout === 'card' && offsetY != null) params.set('oy', String(offsetY));
+  if (frame === false) params.set('frame', '0');
   if (Array.isArray(sections)) params.set('sections', sections.length ? sections.join(',') : 'none');
   if (accent) params.set('accent', accent);
   if (brand != null && brand !== '') params.set('brand', brand);
   if (Array.isArray(socials)) params.set('socials', socials.length ? socials.join(',') : 'none');
+  if (edit) params.set('edit', '1');
   const query = params.toString();
   return `${String(base || '').replace(/\/+$/, '')}/overlay.html${query ? `?${query}` : ''}`;
 }

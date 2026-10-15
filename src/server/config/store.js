@@ -48,6 +48,7 @@ export function normalizeTheme(theme = {}) {
     accentColor: HEX_COLOR.test(String(theme.accentColor || '')) ? String(theme.accentColor).toLowerCase() : DEFAULT_ACCENT,
     brandText: str(theme.brandText, 32),
     logoUrl: str(theme.logoUrl, 500),
+    showFrame: theme.showFrame !== false,
     socials: socials.map(String).filter((k) => SOCIAL_KEYS.includes(k)),
   };
 }
@@ -67,6 +68,9 @@ export function normalizePresets(presets) {
       // Nur fuer die Karte: Groesse (0.5 - 3) und Ecke (tl, tr, bl, br).
       scale: clampNumber(p?.scale, 0.5, 3, 1),
       position: CARD_POSITIONS.includes(p?.position) ? p.position : 'tl',
+      // Abstand der Karte zur Anker-Ecke in Prozent der Bildbreite/-hoehe (frei verschoben).
+      offsetX: p?.offsetX == null ? null : clampNumber(p.offsetX, 0, 100, null),
+      offsetY: p?.offsetY == null ? null : clampNumber(p.offsetY, 0, 100, null),
       sections: Array.isArray(p?.sections) ? p.sections.map((s) => str(s, 30)).filter(Boolean) : [],
       accentColor: HEX_COLOR.test(String(p?.accentColor || '')) ? String(p.accentColor).toLowerCase() : '',
       brandText: str(p?.brandText, 32),

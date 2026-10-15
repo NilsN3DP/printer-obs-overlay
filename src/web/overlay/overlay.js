@@ -15,6 +15,9 @@ const STATE = {
 let printerId = params.get('printer') || '';
 let activeSections = new Set(SECTION_KEYS);
 let brandEmpty = false; // weder Name noch Logo noch Social-Symbole -> Block ausblenden
+let frameOn = true; // Eckrahmen global abschaltbar (Branding)
+const editMode = params.get('edit') === '1';
+const CARD_DEFAULT = { x: 1.25, y: 2.22 }; // 24 px Abstand bei 1920 x 1080
 
 // ---------- Darstellung ----------
 
@@ -40,7 +43,13 @@ async function loadAppearance() {
   const scale = Math.min(3, Math.max(0.5, Number(params.get('scale') || preset?.scale || 1) || 1));
   document.documentElement.style.setProperty('--card-scale', String(scale));
   const position = params.get('position') || preset?.position || 'tl';
-  for (const pos of ['tl', 'tr', 'bl', 'br']) document.body.classList.toggle(`pos-${pos}`, pos === position);
+  const offset = (key, presetKey, fallback) => {
+    const raw = params.has(key) ? params.get(key) : preset?.[presetKey];
+    const n = Number(raw);
+    return raw != null && raw !== '' && Number.isFinite(n) ? n : fallback;
+  };
+  placeCard(position, offset('ox', 'offsetX', CARD_DEFAULT.x), offset('oy', 'offsetY', CARD_DEFAULT.y));
+  frameOn = params.has('frame') ? params.get('frame') !== '0' : theme.showFrame !== false;
 
   activeSections = new Set(params.has('sections') ? list(params.get('sections'))
     : preset?.sections?.length ? preset.sections : SECTION_KEYS);
@@ -63,6 +72,68 @@ async function loadAppearance() {
   document.documentElement.classList.remove('is-loading');
 }
 
+// ---------- Karte: Position und Verschieben ----------
+
+/** Karte an einer Ecke verankern; Abstaende in Prozent der Bildbreite/-hoehe. */
+function placeCard(anchor, x, y) {
+  const style = document.documentElement.style;
+  const left = anchor.endsWith('l');
+  const top = anchor.startsWith('t');
+  style.setProperty('--card-left', left ? `${x}vw` : 'auto');
+  style.setProperty('--card-right', left ? 'auto' : `${x}vw`);
+  style.setProperty('--card-top', top ? `${y}vh` : 'auto');
+  style.setProperty('--card-bottom', top ? 'auto' : `${y}vh`);
+  style.setProperty('--card-origin', `${top ? 'top' : 'bottom'} ${left ? 'left' : 'right'}`);
+}
+
+/**
+ * Im Bearbeitungsmodus (Vorschau im Dashboard) laesst sich die Karte ziehen. Beim Loslassen
+ * wird die naechste Ecke zum Anker, damit die Karte beim Wachsen im Bild bleibt; das
+ * Ergebnis geht per postMessage an das Dashboard.
+ */
+function enableCardDrag() {
+  const panel = $('panel');
+  const clamp = (v, min, max) => Math.min(Math.max(v, min), Math.max(min, max));
+  const round = (v) => Math.round(v * 100) / 100;
+  let start = null;
+  panel.addEventListener('pointerdown', (e) => {
+    if (!document.body.classList.contains('layout-card') || e.button !== 0) return;
+    const r = panel.getBoundingClientRect();
+    start = { x: e.clientX, y: e.clientY, left: r.left, top: r.top, w: r.width, h: r.height };
+    try {
+      panel.setPointerCapture(e.pointerId);
+    } catch {
+      // ohne Capture funktioniert das Ziehen trotzdem, solange der Zeiger auf der Karte bleibt
+    }
+    document.body.classList.add('dragging');
+    e.preventDefault();
+  });
+  panel.addEventListener('pointermove', (e) => {
+    if (!start) return;
+    const left = clamp(start.left + e.clientX - start.x, 0, innerWidth - start.w);
+    const top = clamp(start.top + e.clientY - start.y, 0, innerHeight - start.h);
+    placeCard('tl', (left / innerWidth) * 100, (top / innerHeight) * 100);
+  });
+  const finish = () => {
+    if (!start) return;
+    start = null;
+    document.body.classList.remove('dragging');
+    const r = panel.getBoundingClientRect();
+    const anchor = `${(r.top + r.bottom) / 2 < innerHeight / 2 ? 't' : 'b'}${(r.left + r.right) / 2 < innerWidth / 2 ? 'l' : 'r'}`;
+    const x = round(((anchor.endsWith('l') ? r.left : innerWidth - r.right) / innerWidth) * 100);
+    const y = round(((anchor.startsWith('t') ? r.top : innerHeight - r.bottom) / innerHeight) * 100);
+    placeCard(anchor, x, y);
+    window.parent?.postMessage({ type: 'printer-overlay:card', position: anchor, offsetX: x, offsetY: y }, '*');
+  };
+  panel.addEventListener('pointerup', finish);
+  panel.addEventListener('pointercancel', finish);
+}
+
+if (editMode) {
+  document.body.classList.add('edit-mode');
+  enableCardDrag();
+}
+
 function renderBrand(text) {
   const handle = $('handle');
   handle.textContent = '';
@@ -80,6 +151,7 @@ function renderBrand(text) {
 function applySections() {
   document.querySelectorAll('[data-section]').forEach((n) => n.classList.toggle('section-off', !activeSections.has(n.dataset.section)));
   if (brandEmpty) document.querySelector('[data-section="brand"]').classList.add('section-off');
+  if (!frameOn) document.querySelectorAll('[data-section="frame"]').forEach((n) => n.classList.add('section-off'));
   const identityOn = (activeSections.has('brand') && !brandEmpty) || activeSections.has('printerName');
   document.querySelector('.identity').classList.toggle('section-off', !identityOn);
   document.querySelector('[data-divider]').classList.toggle('section-off', !identityOn);

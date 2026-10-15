@@ -1,6 +1,6 @@
 // Overlay & OBS: Branding, Overlay-Varianten (Presets), OBS-Link und Live-Vorschau.
-import { CARD_POSITIONS, DEFAULT_ACCENT, SECTIONS, SECTION_KEYS, SOCIALS, buildOverlayUrl } from '../../shared/sections.js';
-import { confirmDialog, copyText, field, h, scaleSlider, segmented, select, slugify, toast } from '../ui.js';
+import { DEFAULT_ACCENT, SECTIONS, SECTION_KEYS, SOCIALS, buildOverlayUrl } from '../../shared/sections.js';
+import { cardControls, confirmDialog, copyText, field, h, segmented, select, slugify, toast } from '../ui.js';
 
 let app;
 let root;
@@ -66,6 +66,9 @@ function brandingCard() {
         h('button', { class: 'btn ghost sm', onclick: () => { theme.accentColor = DEFAULT_ACCENT; markDirty(); draw(); } }, 'Prusa-Orange')))),
     field('Logo-URL (optional)', h('input', { type: 'text', value: theme.logoUrl, placeholder: 'https://…/logo.png', oninput: set('logoUrl') }),
       'Quadratisches Bild, wird links neben dem Namen angezeigt.'),
+    h('label', { class: 'check', style: { marginBottom: '14px' } },
+      h('input', { type: 'checkbox', checked: theme.showFrame !== false, onchange: (e) => { theme.showFrame = e.target.checked; markDirty(); } }),
+      'Eckrahmen anzeigen (bei der Leiste)'),
     h('div', { class: 'field' },
       h('span', {}, 'Social-Media-Symbole'),
       h('div', { class: 'sections-grid' }, SOCIALS.map((s) => h('label', { class: 'check' },
@@ -120,9 +123,7 @@ function presetCard() {
           oninput: (e) => { preset.name = e.target.value; if (preset.isNew) preset.id = slugify(e.target.value) || preset.id; editId = preset.id; markDirty(); },
         })),
         field('Layout', segmented([['bar', 'Leiste unten'], ['card', 'Karte']], preset.layout, (v) => { preset.layout = v; markDirty(); draw(); }))),
-      preset.layout === 'card' ? h('div', { class: 'grid2' },
-        field('Größe der Karte', scaleSlider(preset.scale || 1, (v) => { preset.scale = v; markDirty(); })),
-        field('Position', select(CARD_POSITIONS, preset.position || 'tl', (v) => { preset.position = v; markDirty(); }))) : null,
+      preset.layout === 'card' ? cardControls(preset, (redraw) => { markDirty(); if (redraw) draw(); }) : null,
       field('Eigene Akzentfarbe', h('div', { class: 'row', style: { flexWrap: 'nowrap' } },
         h('label', { class: 'check' },
           h('input', {
@@ -156,7 +157,8 @@ function sectionPicker(preset) {
         h('button', { class: 'btn ghost sm', onclick: () => setAll(true) }, 'alle'),
         h('button', { class: 'btn ghost sm', onclick: () => setAll(false) }, 'keine'))),
     h('div', { class: 'sections-groups' }, groups.map((group) => {
-      const items = SECTIONS.filter((s) => s.group === group);
+      // Eckrahmen wird im Branding global geschaltet.
+      const items = SECTIONS.filter((s) => s.group === group && s.key !== 'frame');
       if (items[0].toolchange && !toolchanger) return null;
       return h('div', { class: 'sections-group' },
         h('h4', {}, group),
@@ -184,12 +186,30 @@ function previewUrl() {
     layout: preset.layout,
     scale: preset.scale,
     position: preset.position,
+    offsetX: preset.offsetX,
+    offsetY: preset.offsetY,
+    frame: theme.showFrame !== false,
+    edit: true,
     sections: preset === STANDARD ? SECTION_KEYS : sections,
     accent: preset.accentColor || theme.accentColor,
     brand: theme.brandText || ' ',
     socials: theme.socials,
   });
 }
+
+// Karte in der Vorschau verschoben: Position uebernehmen, ohne die Vorschau neu zu laden.
+window.addEventListener('message', (e) => {
+  if (!frame || e.source !== frame.contentWindow || e.data?.type !== 'printer-overlay:card') return;
+  const preset = currentPreset();
+  if (preset === STANDARD) return;
+  preset.position = e.data.position;
+  preset.offsetX = e.data.offsetX;
+  preset.offsetY = e.data.offsetY;
+  frame.dataset.url = previewUrl();
+  markDirty();
+  // Frei verschoben: keine Ecke mehr als ausgewaehlt markieren.
+  root.querySelectorAll('.btn.active-soft').forEach((b) => b.classList.remove('active-soft'));
+});
 
 function schedulePreview() {
   clearTimeout(previewTimer);
@@ -227,15 +247,14 @@ function obsCard() {
   const printers = (app.config.printers || []).map((p) => [p.id, p.name]);
   const presetOptions = [['', 'wie beim Drucker eingestellt'], ...presets.filter((p) => !p.isNew).map((p) => [p.id, p.name])];
   const url = buildOverlayUrl(app.baseUrl(), { printer: linkPrinter, preset: linkPreset });
-  const input = h('input', { type: 'text', readOnly: true, value: url, onclick: (e) => e.target.select() });
   const localOnly = /\/\/(localhost|127\.0\.0\.1)[:/]/.test(url) && app.system?.mode === 'docker';
-  return h('div', { class: 'card' },
-    h('h2', {}, 'In OBS einbinden'),
+
+  const linkBlock = () => [
     h('div', { class: 'grid2' },
       field('Drucker', select(printers, linkPrinter, (v) => { linkPrinter = v; draw(); })),
       field('Variante', select(presetOptions, linkPreset, (v) => { linkPreset = v; draw(); }))),
     h('div', { class: 'urlbox' },
-      input,
+      h('input', { type: 'text', readOnly: true, value: url, onclick: (e) => e.target.select() }),
       h('button', { class: 'btn', onclick: () => copyText(url) }, 'Kopieren'),
       h('a', { class: 'btn', href: url, target: '_blank', rel: 'noreferrer' }, 'Öffnen')),
     localOnly ? h('div', { class: 'notice warn', style: { marginTop: '12px' } },
@@ -244,8 +263,27 @@ function obsCard() {
       h('li', {}, 'In OBS: ', h('b', {}, 'Quelle hinzufügen → Browser')),
       h('li', {}, 'Link einfügen, Breite ', h('b', {}, '1920'), ', Höhe ', h('b', {}, '1080')),
       h('li', {}, 'Quelle über die gesamte Szene ziehen – fertig. Änderungen hier erscheinen sofort in OBS.')),
+  ];
+
+  // Dashboard kommt vom OBS-Plugin: die Quelle "Printer Overlay" braucht keinen Link.
+  if (app.system?.mode === 'obs') {
+    return h('div', { class: 'card' },
+      h('h2', {}, 'In OBS einbinden'),
+      h('ol', { class: 'steps' },
+        h('li', {}, 'In OBS bei „Quellen" auf ', h('b', {}, '+'), ' klicken und ', h('b', {}, 'Printer Overlay'), ' wählen.'),
+        h('li', {}, 'Drucker auswählen und mit OK bestätigen. Die Größe stimmt automatisch.'),
+        h('li', {}, 'Die Quelle in der Liste ganz nach oben schieben. Änderungen hier erscheinen sofort in OBS.')),
+      h('details', { style: { marginTop: '14px' } },
+        h('summary', { class: 'muted small', style: { cursor: 'pointer' } }, 'Alternativ: als Browserquelle mit Link'),
+        h('div', { style: { marginTop: '12px' } }, linkBlock())));
+  }
+
+  return h('div', { class: 'card' },
+    h('h2', {}, 'In OBS einbinden'),
+    ...linkBlock(),
     h('p', { class: 'muted small', style: { margin: '12px 0 0' } },
-      'Mit dem OBS-Plugin geht es ohne Link: ', h('b', {}, 'Quelle hinzufügen → Printer Overlay'), ' und Drucker auswählen.'));
+      'Mit dem OBS-Plugin geht es ohne Link: ', h('b', {}, 'Quelle hinzufügen → Printer Overlay'),
+      ', unter „Server" auf ', h('b', {}, 'Extern'), ' stellen und ', h('b', {}, app.baseUrl()), ' eintragen.'));
 }
 
 // ---------- Speichern ----------

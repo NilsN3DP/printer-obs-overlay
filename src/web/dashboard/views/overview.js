@@ -64,7 +64,7 @@ function card(p) {
     job,
     h('div', { class: 'pcard-foot' },
       h('a', { class: 'btn sm', href: url, target: '_blank', rel: 'noreferrer' }, 'Overlay ansehen'),
-      h('button', { class: 'btn sm', onclick: () => copyText(url) }, 'OBS-Link kopieren'),
+      appRef.system?.mode === 'obs' ? null : h('button', { class: 'btn sm', onclick: () => copyText(url) }, 'OBS-Link kopieren'),
       p.virtual ? null : h('button', { class: 'btn sm ghost', onclick: () => appRef.go('printers', p.id) }, 'Bearbeiten')));
 }
 

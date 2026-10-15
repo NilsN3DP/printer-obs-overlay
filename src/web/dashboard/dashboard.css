@@ -105,6 +105,7 @@ main { max-width: 1440px; margin: 0 auto; padding: 26px 28px 60px; }
 .btn.ghost { background: none; border-color: transparent; color: var(--muted); }
 .btn.ghost:hover { color: var(--text); background: var(--panel-2); }
 .btn.sm { padding: 5px 10px; font-size: 12.5px; }
+.btn.active-soft { border-color: var(--accent); background: var(--accent-soft); color: var(--text); }
 .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .row.end { justify-content: flex-end; }
 .row.between { justify-content: space-between; }
@@ -131,7 +132,7 @@ input[type=color] { width: 46px; height: 38px; padding: 3px; background: var(--f
 input[type=checkbox], input[type=radio] { accent-color: var(--accent); width: 16px; height: 16px; margin: 0; }
 .check { display: flex; align-items: center; gap: 9px; cursor: pointer; padding: 3px 0; }
 
-.segmented { display: inline-flex; background: var(--field); border: 1px solid var(--line-2); border-radius: 8px; padding: 3px; gap: 3px; }
+.segmented { justify-self: start; width: max-content; display: inline-flex; background: var(--field); border: 1px solid var(--line-2); border-radius: 8px; padding: 3px; gap: 3px; }
 .segmented button { border: 0; background: none; color: var(--muted); font: inherit; font-weight: 650; padding: 6px 13px; border-radius: 6px; cursor: pointer; }
 .segmented button.active { background: var(--accent); color: #fff; }
 
