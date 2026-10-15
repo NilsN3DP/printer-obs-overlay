@@ -19,7 +19,11 @@ export function openWizard(app, onDone) {
     skipPrinter: false,
     found: null, // Ergebnis der Netzwerksuche
     searching: false,
-    theme: { ...app.config.theme, socials: [...(app.config.theme.socials || [])] },
+    // Ersteinrichtung startet leer – auch wenn eine aeltere Konfiguration schon Werte enthaelt.
+    // Beim erneuten Start ueber "System" bleiben die gespeicherten Werte erhalten.
+    theme: app.config.setupDone
+      ? { ...app.config.theme, socials: [...(app.config.theme.socials || [])] }
+      : { ...app.config.theme, brandText: '', logoUrl: '', accentColor: DEFAULT_ACCENT, socials: [] },
     layout: 'bar',
     scale: 1,
     keepDemo: false,
