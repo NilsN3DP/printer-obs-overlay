@@ -1,8 +1,7 @@
-// Drucker einrichten: Liste, Formular, Verbindungstest, Netzwerksuche und Slotplan.
+// Drucker einrichten: Liste, Formular, Verbindungstest und Netzwerksuche.
 import { api } from '../api.js';
 import { TYPE_LABELS, field, h, select, slugify, toast } from '../ui.js';
 
-const MATERIALS = ['PLA', 'PETG', 'ASA', 'ABS', 'TPU', 'PA', 'PC', 'PVB', 'HIPS', 'PLA-CF', 'PETG-CF', 'PA-CF'];
 let app;
 let draft = []; // Arbeitskopie der Drucker
 let selectedId = null;
@@ -30,7 +29,7 @@ function newPrinter(extra = {}) {
   while (draft.some((p) => p.id === `drucker-${n}`)) n++;
   const printer = {
     id: `drucker-${n}`, name: '', type: 'prusalink', model: 'custom', host: '', username: 'maker',
-    cameraUrl: '', presetId: '', wasteGramsPerChange: 0, slots: [], isNew: true, ...extra,
+    presetId: '', wasteGramsPerChange: 0, isNew: true, ...extra,
   };
   draft.push(printer);
   selectedId = printer.id;
@@ -154,32 +153,6 @@ function authFields(p) {
   return [];
 }
 
-function slotEditor(p, count) {
-  const slots = Array.from({ length: count }, (_, i) => p.slots.find((s) => s.slot === i + 1) || { slot: i + 1, empty: true });
-  p.slots = slots;
-  const rows = slots.map((slot) => {
-    const set = (key, value) => {
-      slot[key] = value;
-      if (key !== 'empty' && key !== 'color' && value) slot.empty = false;
-      markDirty();
-      row.classList.toggle('is-empty', slot.empty);
-      emptyBox.checked = slot.empty;
-    };
-    const emptyBox = h('input', { type: 'checkbox', checked: slot.empty, onchange: (e) => set('empty', e.target.checked) });
-    const row = h('div', { class: `slot-row${slot.empty ? ' is-empty' : ''}` },
-      h('strong', {}, `S${slot.slot}`),
-      h('input', { type: 'text', placeholder: 'Hersteller', value: slot.brand || '', oninput: (e) => set('brand', e.target.value) }),
-      h('input', { type: 'text', placeholder: 'Farbe / Produkt', value: slot.name || '', oninput: (e) => set('name', e.target.value) }),
-      h('input', { type: 'text', placeholder: 'Material', list: 'materials', value: slot.material || '', oninput: (e) => set('material', e.target.value) }),
-      h('input', { type: 'color', value: slot.color || '#777777', oninput: (e) => set('color', e.target.value) }),
-      h('label', { class: 'check small' }, emptyBox, 'leer'));
-    return row;
-  });
-  return h('div', { class: 'slot-table' },
-    h('datalist', { id: 'materials' }, MATERIALS.map((m) => h('option', { value: m }))),
-    rows);
-}
-
 function formCard() {
   const p = draft.find((x) => x.id === selectedId);
   if (!p) {
@@ -226,24 +199,20 @@ function formCard() {
       h('h2', {}, p.name || 'Neuer Drucker'),
       h('button', { class: 'btn danger sm', onclick: remove }, 'Entfernen')),
     h('div', { class: 'grid2' },
-      field('Name', h('input', { type: 'text', value: p.name, placeholder: 'z. B. Core One INDX', oninput: update('name') })),
+      field('Name', h('input', { type: 'text', value: p.name, placeholder: 'z. B. Werkstatt links', oninput: update('name') })),
       field('Modell', select(modelOptions, p.model, (v) => update('model', true)(v)))),
     h('div', { class: 'grid2' },
       field('Verbindung', select(Object.entries(TYPE_LABELS).filter(([k]) => k !== 'demo'), p.type, (v) => update('type', true)(v))),
-      field('Adresse (IP oder Hostname)', h('input', { type: 'text', value: p.host, placeholder: '192.168.1.122', oninput: update('host') }))),
+      field('Adresse (IP oder Hostname)', h('input', { type: 'text', value: p.host, placeholder: 'z. B. 192.168.1.50', oninput: update('host') }))),
     ...authFields(p),
     h('div', { class: 'grid2' },
-      field('Kamera-URL (optional)', h('input', { type: 'text', value: p.cameraUrl, placeholder: 'http://…/snapshot.jpg', oninput: update('cameraUrl') }), 'Wird im Dashboard angezeigt.'),
-      field('Overlay-Variante', select(presetOptions, p.presetId, (v) => update('presetId')(v)), 'Bestimmt Layout & Bereiche im OBS-Overlay.')),
-    model.toolchanger ? h('div', {},
-      h('h2', { style: { marginTop: '10px' } }, `Slotplan (${model.slots} Slots)`),
-      h('p', { class: 'sub' }, 'Optional: Was in welchem Slot steckt – wird im Overlay beim aktiven Tool angezeigt.'),
-      slotEditor(p, model.slots),
-      h('div', { style: { marginTop: '14px', maxWidth: '260px' } },
-        field('Abfall pro Wechsel (g, Fallback)', h('input', {
-          type: 'number', step: '0.001', min: '0', value: p.wasteGramsPerChange || 0,
-          oninput: (e) => { p.wasteGramsPerChange = Number(e.target.value) || 0; markDirty(); },
-        }), 'Nur nötig, wenn die Druckdatei keine Werte liefert.'))) : null,
+      field('Overlay-Variante', select(presetOptions, p.presetId, (v) => update('presetId')(v)), 'Bestimmt Layout & Bereiche im OBS-Overlay.'),
+      model.toolchanger ? field('Abfall pro Wechsel (g, Fallback)', h('input', {
+        type: 'number', step: '0.001', min: '0', value: p.wasteGramsPerChange || 0,
+        oninput: (e) => { p.wasteGramsPerChange = Number(e.target.value) || 0; markDirty(); },
+      }), 'Nur nötig, wenn die Druckdatei keine Werte liefert.') : null),
+    model.toolchanger ? h('p', { class: 'muted small' },
+      'Tools, Farben und Materialien liest das Overlay automatisch aus der laufenden Druckdatei.') : null,
     h('details', { style: { marginTop: '14px' } },
       h('summary', { class: 'muted small', style: { cursor: 'pointer' } }, 'Erweitert'),
       h('div', { style: { marginTop: '10px' } },
@@ -264,7 +233,7 @@ async function save() {
     if (ids.has(p.id)) return toast(`Die ID „${p.id}" ist doppelt.`, 'bad');
     ids.add(p.id);
   }
-  const printers = draft.map(({ isNew, idTouched, apiKeySet, passwordSet, capabilities, issues, virtual, ...rest }) => rest);
+  const printers = draft.map(({ isNew, idTouched, apiKeySet, passwordSet, capabilities, issues, virtual, cameraUrl, slots, ...rest }) => rest);
   if (await app.save({ ...app.config, printers }, 'Drucker gespeichert')) {
     loadDraft();
     draw();

@@ -14,6 +14,7 @@ const STATE = {
 
 let printerId = params.get('printer') || '';
 let activeSections = new Set(SECTION_KEYS);
+let brandEmpty = false; // weder Name noch Logo noch Social-Symbole -> Block ausblenden
 
 // ---------- Darstellung ----------
 
@@ -43,8 +44,10 @@ async function loadAppearance() {
   const accent = [params.get('accent'), preset?.accentColor, theme.accentColor].find((c) => HEX.test(c || '')) || DEFAULT_ACCENT;
   document.documentElement.style.setProperty('--accent', accent);
 
-  renderBrand(params.get('brand') ?? (preset?.brandText || theme.brandText || ''));
+  const brandText = params.get('brand') ?? (preset?.brandText || theme.brandText || '');
+  renderBrand(brandText);
   const socials = params.has('socials') ? list(params.get('socials')) : (preset?.socials ?? theme.socials ?? []);
+  brandEmpty = !brandText.trim() && !theme.logoUrl && !socials.length;
   document.querySelectorAll('[data-social]').forEach((n) => n.classList.toggle('hidden', !socials.includes(n.dataset.social)));
 
   const logo = $('brandLogo');
@@ -72,7 +75,8 @@ function renderBrand(text) {
 
 function applySections() {
   document.querySelectorAll('[data-section]').forEach((n) => n.classList.toggle('section-off', !activeSections.has(n.dataset.section)));
-  const identityOn = activeSections.has('brand') || activeSections.has('printerName');
+  if (brandEmpty) document.querySelector('[data-section="brand"]').classList.add('section-off');
+  const identityOn = (activeSections.has('brand') && !brandEmpty) || activeSections.has('printerName');
   document.querySelector('.identity').classList.toggle('section-off', !identityOn);
   document.querySelector('[data-divider]').classList.toggle('section-off', !identityOn);
 }

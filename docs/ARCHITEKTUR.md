@@ -35,7 +35,7 @@ laufenden Server nach spätestens zwei Sekunden übernommen.
 | `telemetry/poller.js` | Fragt alle Drucker zyklisch ab, meldet Änderungen per Event |
 | `telemetry/job-meta.js` | Lädt die laufende Druckdatei, parst sie, cacht das Ergebnis |
 | `telemetry/gcode/*` | G-code/bgcode lesen (heatshrink, MeatPack), Timeline, Live-Berechnung |
-| `telemetry/enrich.js` | Firmware-Werte + Datei-Analyse + Slotplan → Overlay-Felder |
+| `telemetry/enrich.js` | Firmware-Werte + Datei-Analyse (inkl. Slots) → Overlay-Felder |
 | `app.js` | HTTP-Routen, Server-Sent Events (`/api/stream`) |
 
 ### API
@@ -49,7 +49,6 @@ laufenden Server nach spätestens zwei Sekunden übernommen.
 | POST | `/api/printers/test` | Verbindungstest ohne Speichern |
 | POST | `/api/analyze` | Datei-Check (Rohdaten im Body, Name in `X-Filename`) |
 | GET | `/api/discover?cidr=` | Netzwerksuche |
-| GET | `/api/camera?printer=id` | Kamerabild über den Server (mit Drucker-Login) |
 | GET | `/api/obs/options` | Drucker/Varianten für die OBS-Quelle |
 
 Ändernde Anfragen verlangen `application/json` (außer Upload) und gleiche Herkunft.
@@ -57,7 +56,7 @@ laufenden Server nach spätestens zwei Sekunden übernommen.
 ## Web (`src/web`)
 
 - `overlay.html` + `overlay/` – das OBS-Overlay. Aussehen: URL-Parameter > Variante > Branding.
-- `index.html` + `dashboard/` – Dashboard, eine Datei je Ansicht unter `dashboard/views/`.
+- `index.html` + `dashboard/` – Dashboard, eine Datei je Ansicht unter `dashboard/views/`, Assistent in `dashboard/wizard.js`.
 - `shared/sections.js` – Bereiche und Link-Aufbau, von beiden genutzt.
 
 ## OBS-Plugin (`packaging/obs-plugin`)

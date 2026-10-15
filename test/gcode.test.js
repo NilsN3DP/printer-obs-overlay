@@ -78,3 +78,11 @@ test('Zusammenfassung für den Datei-Check', () => {
   assert.deepEqual(summary.materials, ['PLA', 'PETG', 'ASA']);
   assert.deepEqual(summary.toolUseCounts, [{ tool: 1, count: 1 }, { tool: 2, count: 1 }, { tool: 3, count: 1 }]);
 });
+
+test('Slots werden aus der Druckdatei abgeleitet', async () => {
+  const { slotsFromMeta } = await import('../src/server/telemetry/enrich.js');
+  const slots = slotsFromMeta(parseFile(sample), 8);
+  assert.equal(slots.length, 8);
+  assert.deepEqual(slots[1], { slot: 2, material: 'PETG', color: '#00ff00', empty: false });
+  assert.equal(slots[3].empty, true);
+});

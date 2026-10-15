@@ -17,4 +17,4 @@ services:
       - PUID=99
       - PGID=100
       # Optional: feste Adresse fuer OBS-Links, wenn das Dashboard ueber einen anderen Namen geoeffnet wird
-      # - PUBLIC_BASE_URL=http://192.168.1.234:4200
+      # - PUBLIC_BASE_URL=http://192.168.1.10:4200

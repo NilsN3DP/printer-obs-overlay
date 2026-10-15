@@ -41,12 +41,12 @@ test('Kaputte config.json wird gesichert statt überschrieben', () => {
 test('v1-Konfiguration wird übernommen', () => {
   const cfg = normalizeConfig({
     pollIntervalMs: 1000,
-    theme: { brandText: 'N3DP_de', socials: { youtube: 'visible', instagram: 'visible' } },
-    printers: [{ id: 'Core One INDX', host: 'http://192.168.1.122/', api_key: 'abc' }],
+    theme: { brandText: 'Kanal_de', socials: { youtube: 'visible', instagram: 'visible' } },
+    printers: [{ id: 'Core One INDX', host: 'http://10.0.0.5/', api_key: 'abc' }],
   });
   assert.equal(cfg.printers[0].id, 'core-one-indx');
   assert.equal(cfg.printers[0].model, 'coreone-indx');
-  assert.equal(cfg.printers[0].host, '192.168.1.122');
+  assert.equal(cfg.printers[0].host, '10.0.0.5');
   assert.equal(cfg.printers[0].apiKey, 'abc');
   assert.deepEqual(cfg.theme.socials, ['youtube', 'instagram']);
 });
@@ -103,4 +103,12 @@ test('Grenzwerte und doppelte IDs werden bereinigt', () => {
   assert.deepEqual(cfg.printers.map((p) => p.id), ['a', 'a-2']);
   assert.equal(cfg.presets.length, 1);
   assert.equal(cfg.presets[0].id, 'nur-zeit');
+});
+
+test('Ersteinrichtung: neu = offen, alte Konfiguration mit Druckern = erledigt', () => {
+  assert.equal(normalizeConfig({}).setupDone, false);
+  assert.equal(normalizeConfig({ printers: [{ id: 'a', host: 'x' }] }).setupDone, true);
+  assert.equal(normalizeConfig({ setupDone: true }).setupDone, true);
+  assert.equal(normalizeConfig({}).theme.brandText, '');
+  assert.deepEqual(normalizeConfig({}).theme.socials, []);
 });

@@ -10,7 +10,6 @@ import { PRINTER_MODELS, PRINTER_TYPES, inferModel, modelById } from './models.j
 const HEX_COLOR = /^#[0-9a-f]{6}$/i;
 export const SOCIAL_KEYS = ['youtube', 'instagram', 'tiktok', 'twitch', 'website'];
 export const DEFAULT_ACCENT = '#fa6831';
-export const DEFAULT_BRAND = 'N3DP_de';
 const DEMO_ID = 'demo';
 
 const str = (value, max = 200) => String(value ?? '').trim().slice(0, max);
@@ -43,10 +42,10 @@ export function normalizeTheme(theme = {}) {
   if (Array.isArray(theme.socials)) socials = theme.socials;
   else if (theme.socials && typeof theme.socials === 'object') {
     socials = Object.entries(theme.socials).filter(([, v]) => v).map(([k]) => k);
-  } else socials = ['youtube', 'instagram'];
+  } else socials = [];
   return {
     accentColor: HEX_COLOR.test(String(theme.accentColor || '')) ? String(theme.accentColor).toLowerCase() : DEFAULT_ACCENT,
-    brandText: str(theme.brandText ?? DEFAULT_BRAND, 32),
+    brandText: str(theme.brandText, 32),
     logoUrl: str(theme.logoUrl, 500),
     socials: socials.map(String).filter((k) => SOCIAL_KEYS.includes(k)),
   };
@@ -97,11 +96,9 @@ export function normalizePrinter(p, index = 0) {
     apiKey: str(p?.apiKey ?? p?.api_key, 200),
     username: str(p?.username ?? p?.user, 100),
     password: String(p?.password ?? ''),
-    cameraUrl: str(p?.cameraUrl, 500),
     presetId: slug(p?.presetId),
     // Gramm Abfall pro Toolwechsel – nur Fallback, wenn die Slicer-Datei nichts liefert.
     wasteGramsPerChange: clampNumber(p?.wasteGramsPerChange, 0, 100, 0),
-    slots: normalizeSlots(p?.slots),
   };
 }
 
@@ -120,6 +117,8 @@ export function normalizeConfig(raw = {}) {
     pollIntervalMs: clampNumber(raw.pollIntervalMs, 500, 60000, 2000),
     publicBaseUrl: str(raw.publicBaseUrl, 300).replace(/\/+$/, ''),
     demoMode: Boolean(raw.demoMode),
+    // Ersteinrichtung erledigt? Alte Konfigurationen mit Druckern gelten als eingerichtet.
+    setupDone: typeof raw.setupDone === 'boolean' ? raw.setupDone : printers.length > 0,
     wasteGramsPerChange: clampNumber(raw.wasteGramsPerChange, 0, 100, 0),
     theme: normalizeTheme(raw.theme),
     presets: normalizePresets(raw.presets),
@@ -228,10 +227,8 @@ export class ConfigStore extends EventEmitter {
       username: p.username,
       apiKeySet: Boolean(p.apiKey),
       passwordSet: Boolean(p.password),
-      cameraUrl: p.cameraUrl,
       presetId: p.presetId,
       wasteGramsPerChange: p.wasteGramsPerChange,
-      slots: p.slots,
       issues: printerIssues(p),
       virtual: p.type === 'demo',
     };
@@ -244,6 +241,7 @@ export class ConfigStore extends EventEmitter {
       pollIntervalMs: c.pollIntervalMs,
       publicBaseUrl: c.publicBaseUrl,
       demoMode: c.demoMode,
+      setupDone: c.setupDone,
       wasteGramsPerChange: c.wasteGramsPerChange,
       theme: c.theme,
       presets: c.presets,

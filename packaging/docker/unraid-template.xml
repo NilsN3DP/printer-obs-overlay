@@ -14,7 +14,7 @@
   <Icon>https://raw.githubusercontent.com/NilsN3DP/printer-obs-overlay/main/docs/logo.png</Icon>
   <Config Name="Dashboard-Port" Target="4200" Default="4200" Mode="tcp" Description="Dashboard und Overlay" Type="Port" Display="always" Required="true" Mask="false">4200</Config>
   <Config Name="Daten" Target="/config" Default="/mnt/user/appdata/printer-obs-overlay" Mode="rw" Description="Konfiguration, Zugangsdaten und G-code-Cache" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/printer-obs-overlay</Config>
-  <Config Name="Oeffentliche Adresse" Target="PUBLIC_BASE_URL" Default="" Mode="" Description="Optional, z. B. http://192.168.1.234:4200 - Basis fuer kopierte OBS-Links" Type="Variable" Display="always" Required="false" Mask="false"></Config>
+  <Config Name="Oeffentliche Adresse" Target="PUBLIC_BASE_URL" Default="" Mode="" Description="Optional, z. B. http://192.168.1.10:4200 - Basis fuer kopierte OBS-Links" Type="Variable" Display="always" Required="false" Mask="false"></Config>
   <Config Name="PUID" Target="PUID" Default="99" Mode="" Description="Benutzer-ID fuer Dateien im Datenordner" Type="Variable" Display="advanced" Required="false" Mask="false">99</Config>
   <Config Name="PGID" Target="PGID" Default="100" Mode="" Description="Gruppen-ID fuer Dateien im Datenordner" Type="Variable" Display="advanced" Required="false" Mask="false">100</Config>
   <Config Name="Zeitzone" Target="TZ" Default="Europe/Berlin" Mode="" Description="Fuer Uhrzeiten wie 'fertig um'" Type="Variable" Display="advanced" Required="false" Mask="false">Europe/Berlin</Config>

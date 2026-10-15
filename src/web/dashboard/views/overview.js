@@ -1,12 +1,10 @@
-// Uebersicht: Live-Karten aller Drucker mit Status, Fortschritt, Kamera und OBS-Link.
+// Uebersicht: Live-Karten aller Drucker mit Status, Fortschritt und OBS-Link.
 import { buildOverlayUrl } from '../../shared/sections.js';
 import { STATE_LABELS, TYPE_LABELS, copyText, duration, h } from '../ui.js';
 
 let grid = null;
 let summary = null;
 let appRef = null;
-const cameras = new Map(); // printerId -> <img>, damit Bilder beim Aktualisieren nicht flackern
-let camTimer = null;
 
 export function render(container, app) {
   appRef = app;
@@ -21,13 +19,6 @@ export function render(container, app) {
     grid,
   );
   if (app.health) onHealth(app.health);
-  clearInterval(camTimer);
-  camTimer = setInterval(refreshCameras, 10_000);
-}
-
-function refreshCameras() {
-  if (!grid?.isConnected) return clearInterval(camTimer);
-  for (const [id, img] of cameras) img.src = `/api/camera?printer=${encodeURIComponent(id)}&t=${Date.now()}`;
 }
 
 function metaLine(p) {
@@ -47,17 +38,6 @@ function card(p) {
     ? h('span', { class: 'badge warn' }, 'Demo')
     : p.connected ? h('span', { class: 'badge ok' }, 'Online') : h('span', { class: 'badge bad' }, 'Offline');
   const url = buildOverlayUrl(appRef.baseUrl(), { printer: p.id });
-
-  let cam = null;
-  if (p.hasCamera) {
-    cam = cameras.get(p.id);
-    if (!cam) {
-      cam = h('img', { class: 'pcard-cam', alt: 'Kamera', src: `/api/camera?printer=${encodeURIComponent(p.id)}&t=${Date.now()}` });
-      cam.onerror = () => { cam.style.visibility = 'hidden'; };
-      cam.onload = () => { cam.style.visibility = 'visible'; };
-      cameras.set(p.id, cam);
-    }
-  }
 
   const progress = typeof p.progress === 'number' ? Math.max(0, Math.min(100, p.progress)) : null;
   const job = p.connected
@@ -81,7 +61,6 @@ function card(p) {
         h('div', { class: 'pcard-title' }, p.name),
         h('div', { class: 'pcard-meta' }, [p.capabilities?.name, TYPE_LABELS[p.type], p.host].filter(Boolean).join(' · '))),
       badge),
-    cam,
     job,
     h('div', { class: 'pcard-foot' },
       h('a', { class: 'btn sm', href: url, target: '_blank', rel: 'noreferrer' }, 'Overlay ansehen'),
@@ -106,6 +85,5 @@ export function onHealth(health) {
         list.length ? 'Bis dahin zeigt der Demo-Drucker, wie das Overlay aussieht.' : ''),
       h('button', { class: 'btn primary', onclick: () => appRef.go('printers', 'new') }, 'Drucker hinzufügen')));
   }
-  for (const id of cameras.keys()) if (!list.some((p) => p.id === id && p.hasCamera)) cameras.delete(id);
   grid.replaceChildren(...nodes);
 }

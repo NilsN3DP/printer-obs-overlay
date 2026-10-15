@@ -1,5 +1,9 @@
 #pragma once
+#include <atomic>
+#include <condition_variable>
+#include <mutex>
 #include <string>
+#include <thread>
 
 namespace printer_overlay {
 
@@ -20,15 +24,21 @@ public:
 
 	std::string base_url() const;
 
-	static constexpr int kPort = 4217;    // eigener Server des Plugins
-	static constexpr int kAppPort = 4200; // Windows-App / Docker auf diesem PC
+	static constexpr int kPort = 4217; // eigener Server des Plugins
 
 private:
 	ServerManager() = default;
 	std::string base_url_ = "http://127.0.0.1:4217";
+	void ensure_running_locked();
+	void spawn_locked();
+
 	void *job_ = nullptr;
 	void *process_ = nullptr;
-	bool ready_ = false;
+	std::atomic<bool> ready_ = false;
+	std::atomic<bool> stopping_ = false;
+	std::mutex mutex_;
+	std::condition_variable wake_;
+	std::thread watchdog_;
 };
 
 } // namespace printer_overlay

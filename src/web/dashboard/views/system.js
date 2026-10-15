@@ -64,7 +64,9 @@ export function render(container, app) {
   container.append(
     h('div', { class: 'view-head' },
       h('div', {}, h('h1', {}, 'System'), h('p', {}, 'Allgemeine Einstellungen und Programminformationen.')),
-      h('button', { class: 'btn primary', onclick: save }, 'Speichern')),
+      h('div', { class: 'row' },
+        h('button', { class: 'btn', onclick: () => app.wizard() }, 'Einrichtungsassistent'),
+        h('button', { class: 'btn primary', onclick: save }, 'Speichern'))),
     h('div', { class: 'cols-even' },
       h('div', { class: 'stack' },
         h('div', { class: 'card' },

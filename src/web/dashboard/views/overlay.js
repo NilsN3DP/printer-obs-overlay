@@ -58,7 +58,7 @@ function brandingCard() {
   const set = (key) => (e) => { theme[key] = e.target.value; markDirty(); };
   return h('div', { class: 'card' },
     h('h2', {}, 'Branding'),
-    h('p', { class: 'sub' }, 'Gilt für alle Overlays. Ein Unterstrich färbt den Rest des Namens in der Akzentfarbe (z. B. N3DP_de).'),
+    h('p', { class: 'sub' }, 'Gilt für alle Overlays. Ein Unterstrich färbt den Teil danach in der Akzentfarbe (z. B. MeinKanal_de).'),
     h('div', { class: 'grid2' },
       field('Kanalname', h('input', { type: 'text', maxLength: 32, value: theme.brandText, oninput: set('brandText') })),
       field('Akzentfarbe', h('div', { class: 'row', style: { flexWrap: 'nowrap' } },

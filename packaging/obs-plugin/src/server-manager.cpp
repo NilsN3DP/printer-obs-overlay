@@ -7,6 +7,7 @@
 #include <windows.h>
 
 #include <chrono>
+#include <mutex>
 #include <cwchar>
 #include <thread>
 
@@ -80,21 +81,40 @@ bool ServerManager::wait_ready(int timeout_ms)
 
 void ServerManager::start()
 {
-	if (process_)
-		return;
-	// Laeuft schon ein Server (Windows-App auf 4200 oder eine zweite OBS-Instanz)? Dann mitbenutzen,
-	// damit die Drucker nicht doppelt abgefragt werden.
-	for (int port : {kPort, kAppPort}) {
-		std::string base = "http://127.0.0.1:" + std::to_string(port);
-		if (answers(base, 600)) {
-			base_url_ = base;
-			ready_ = true;
-			blog(LOG_INFO, "[printer-overlay] Vorhandenen Server auf Port %d gefunden - wird mitbenutzt", port);
-			return;
-		}
+	{
+		std::lock_guard<std::mutex> lock(mutex_);
+		ensure_running_locked();
 	}
-	base_url_ = "http://127.0.0.1:" + std::to_string(kPort);
+	// Waechter: startet den Server neu, falls er beendet wurde oder abstuerzt.
+	stopping_ = false;
+	watchdog_ = std::thread([this] {
+		std::unique_lock<std::mutex> lock(mutex_);
+		while (!wake_.wait_for(lock, std::chrono::seconds(5), [this] { return stopping_.load(); }))
+			ensure_running_locked();
+	});
+}
 
+void ServerManager::ensure_running_locked()
+{
+	if (process_ && WaitForSingleObject((HANDLE)process_, 0) == WAIT_TIMEOUT)
+		return; // eigener Server laeuft
+	if (process_) {
+		blog(LOG_WARNING, "[printer-overlay] Server wurde beendet - starte neu");
+		CloseHandle((HANDLE)process_);
+		process_ = nullptr;
+		ready_ = false;
+	}
+	// Zweite OBS-Instanz: deren Server auf demselben Port mitbenutzen.
+	if (answers(base_url_, 600)) {
+		ready_ = true;
+		return;
+	}
+	ready_ = false;
+	spawn_locked();
+}
+
+void ServerManager::spawn_locked()
+{
 	char *exe = obs_module_file("server/printer-overlay.exe");
 	if (!exe) {
 		blog(LOG_ERROR, "[printer-overlay] server/printer-overlay.exe fehlt im Plugin-Ordner");
@@ -106,12 +126,15 @@ void ServerManager::start()
 	std::wstring command = L"\"" + exe_w + L"\" --background --port " + std::to_wstring(kPort);
 	std::wstring env = environment_block();
 
-	// Job-Objekt: Server endet automatisch mit OBS, auch nach einem Absturz.
-	HANDLE job = CreateJobObjectW(nullptr, nullptr);
-	if (job) {
-		JOBOBJECT_EXTENDED_LIMIT_INFORMATION info = {};
-		info.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
-		SetInformationJobObject(job, JobObjectExtendedLimitInformation, &info, sizeof(info));
+	if (!job_) {
+		// Job-Objekt: Server endet automatisch mit OBS, auch nach einem Absturz.
+		HANDLE job = CreateJobObjectW(nullptr, nullptr);
+		if (job) {
+			JOBOBJECT_EXTENDED_LIMIT_INFORMATION info = {};
+			info.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+			SetInformationJobObject(job, JobObjectExtendedLimitInformation, &info, sizeof(info));
+			job_ = job;
+		}
 	}
 
 	STARTUPINFOW si = {};
@@ -122,22 +145,25 @@ void ServerManager::start()
 				 &pi);
 	if (!ok) {
 		blog(LOG_ERROR, "[printer-overlay] Server konnte nicht gestartet werden (Fehler %lu)", GetLastError());
-		if (job)
-			CloseHandle(job);
 		return;
 	}
-	if (job)
-		AssignProcessToJobObject(job, pi.hProcess);
+	if (job_)
+		AssignProcessToJobObject((HANDLE)job_, pi.hProcess);
 	ResumeThread(pi.hThread);
 	CloseHandle(pi.hThread);
-
-	job_ = job;
 	process_ = pi.hProcess;
 	blog(LOG_INFO, "[printer-overlay] Server gestartet (Port %d)", kPort);
 }
 
 void ServerManager::stop()
 {
+	{
+		std::lock_guard<std::mutex> lock(mutex_);
+		stopping_ = true;
+	}
+	wake_.notify_all();
+	if (watchdog_.joinable())
+		watchdog_.join();
 	ready_ = false;
 	if (process_) {
 		TerminateProcess((HANDLE)process_, 0);

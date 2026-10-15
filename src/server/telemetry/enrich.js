@@ -1,5 +1,5 @@
 // Ergaenzt den Rohstatus eines Druckers um abgeleitete Werte.
-// Reihenfolge: Firmwarefeld > G-Code-Ableitung > nichts. Danach Slotplan und Swapping.
+// Reihenfolge: Firmwarefeld > G-Code-Ableitung > nichts. Danach Slots und Swapping.
 import { modelById } from '../config/models.js';
 import { computeLive } from './gcode/live.js';
 
@@ -16,6 +16,17 @@ function slotDisplayName(slot) {
       return true;
     })
     .join(' ');
+}
+
+/** Slots aus der Datei: im Druck genutzte Tools mit Material/Farbe, der Rest als leer. */
+export function slotsFromMeta(meta, modelSlots = 0) {
+  const used = new Set((meta.toolEvents || []).map((e) => e.tool));
+  const count = Math.min(8, Math.max(modelSlots, meta.toolsTotal || 0, ...[...used].map((t) => t + 1)));
+  return Array.from({ length: count }, (_, i) => {
+    const raw = String(meta.colors?.[i] || '').trim();
+    const color = /^#?[0-9a-f]{6}$/i.test(raw) ? (raw.startsWith('#') ? raw : `#${raw}`).toLowerCase() : '';
+    return { slot: i + 1, material: used.has(i) ? meta.materials?.[i] || '' : '', color: used.has(i) ? color : '', empty: !used.has(i) };
+  });
 }
 
 export class Enricher {
@@ -47,15 +58,22 @@ export class Enricher {
       }
     }
 
-    this.applySlots(printerCfg, printer);
+    this.applySlots(printerCfg, printer, meta);
     this.applySwapHeuristic(printerCfg, printer, job, meta);
     if (!printer.filament_display && printer.material) printer.filament_display = printer.material;
     return { ...state, printer, meta: this.metaService.status(printerCfg.id) };
   }
 
-  applySlots(printerCfg, printer) {
-    const slots = printerCfg.slots || [];
-    if (!slots.length) return;
+  /**
+   * Slot-Leiste: aus der Druckdatei abgeleitet (Material/Farbe je Tool wie im Slicer).
+   * Feste Slots gibt es nur noch beim Demo-Drucker; Firmware-Slots haben Vorrang.
+   */
+  applySlots(printerCfg, printer, meta) {
+    if (Array.isArray(printer.filament_slots) && printer.filament_slots.length) return;
+    const model = modelById(printerCfg.model);
+    let slots = printerCfg.slots?.length ? printerCfg.slots : null;
+    if (!slots && meta && model.toolchanger) slots = slotsFromMeta(meta, model.slots);
+    if (!slots?.length) return;
     printer.filament_slots = slots;
     const active = slots.find((slot) => slot.slot === Number(printer.tool));
     if (active && !active.empty) {

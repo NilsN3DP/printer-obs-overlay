@@ -5,7 +5,6 @@ import { discover, localSubnets, subnetOf } from './discovery.js';
 import { serveAsset } from './http/assets.js';
 import { HttpError, createRouter, readBody, readJson, sendJson } from './http/router.js';
 import { autostart } from './platform/system.js';
-import { PrinterClient } from './printers/index.js';
 import { normalizePrinter } from './config/store.js';
 import { parseFile, summarizeMeta } from './telemetry/gcode/parse.js';
 
@@ -30,7 +29,6 @@ export function createApp({ runtime, store, poller, logger }) {
       model: p.model,
       capabilities: modelById(p.model),
       host: p.host,
-      hasCamera: Boolean(p.cameraUrl),
       presetId: p.presetId,
       virtual: p.type === 'demo',
       connected: Boolean(s.connected),
@@ -145,25 +143,6 @@ export function createApp({ runtime, store, poller, logger }) {
     } catch (err) {
       throw new HttpError(400, err.message);
     }
-  });
-
-  // Kamerabild ueber den Server holen – nutzt die Drucker-Zugangsdaten (PrusaLink-Snapshot
-  // braucht Login) und umgeht gemischte Inhalte/CORS im Browser.
-  router.get('/api/camera', async (req, res, url) => {
-    const printer = store.printer(url.searchParams.get('printer'));
-    if (!printer?.cameraUrl) throw new HttpError(404, 'Keine Kamera konfiguriert');
-    const cam = new URL(printer.cameraUrl, `http://${printer.host}`);
-    const sameHost = cam.host === printer.host || cam.hostname === printer.host;
-    const upstream = sameHost
-      ? await new PrinterClient(printer).request(cam.href, { timeoutMs: 6000 })
-      : await fetch(cam.href, { signal: AbortSignal.timeout(6000) });
-    if (!upstream.ok) throw new HttpError(502, `Kamera antwortet mit HTTP ${upstream.status}`);
-    res.writeHead(200, {
-      'Content-Type': upstream.headers.get('content-type') || 'image/jpeg',
-      'Cache-Control': 'no-store',
-    });
-    for await (const chunk of upstream.body) res.write(chunk);
-    res.end();
   });
 
   router.get('/api/system', async (req, res) => {

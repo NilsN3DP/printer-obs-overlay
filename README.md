@@ -46,7 +46,7 @@ auch nach `/boot/config/plugins/dockerMan/templates-user/` kopiert werden.
 
 | Variable | Standard | Bedeutung |
 |---|---|---|
-| `PUBLIC_BASE_URL` | – | Feste Adresse für kopierte OBS-Links, z. B. `http://192.168.1.234:4200` |
+| `PUBLIC_BASE_URL` | – | Feste Adresse für kopierte OBS-Links, z. B. `http://192.168.1.10:4200` |
 | `PUID` / `PGID` | `99` / `100` | Besitzer der Dateien im Datenordner |
 | `TZ` | `Europe/Berlin` | Zeitzone für „fertig um …" |
 | `PORT` | `4200` | Port im Container |
@@ -67,9 +67,14 @@ Adresse ein.
 
 ## Einrichten
 
+Beim ersten Öffnen des Dashboards führt ein **Einrichtungsassistent** in drei Schritten durch
+Drucker, Aussehen und OBS. Er lässt sich jederzeit unter *System → Einrichtungsassistent*
+erneut starten. Alles Weitere:
+
 1. **Drucker:** *Drucker → Im Netzwerk suchen* oder *+ Hinzufügen*. Für PrusaLink Benutzer
    (meist `maker`) und Passwort vom Druckerdisplay unter *Einstellungen → Netzwerk → PrusaLink*.
-   Für INDX/XL das passende Modell wählen – dann erscheinen Slotplan und Toolchanger-Bereiche.
+   Für INDX/XL das passende Modell wählen – dann erscheinen die Toolchanger-Bereiche. Tools,
+   Farben und Materialien kommen automatisch aus der Druckdatei.
 2. **Overlay & OBS:** Kanalname, Akzentfarbe und Social-Symbole festlegen. Unter
    *Overlay-Varianten* Layout (Leiste unten oder Karte) und Bereiche wählen; die Vorschau
    zeigt Änderungen vor dem Speichern. Jedem Drucker wird unter *Drucker* eine Variante
@@ -77,7 +82,7 @@ Adresse ein.
 3. **In OBS:** Plugin-Quelle verwenden oder *Quelle hinzufügen → Browser* mit dem kopierten
    Link (1920 × 1080).
 
-Der Demo-Drucker (unter *System* abschaltbar) zeigt alles mit simulierten INDX-Daten.
+Der Demo-Drucker (unter *System* ein- und ausschaltbar) zeigt alles mit simulierten INDX-Daten.
 
 ### Toolchanger ohne Spezial-Firmware
 

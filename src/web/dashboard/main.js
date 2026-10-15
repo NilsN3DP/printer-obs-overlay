@@ -1,6 +1,7 @@
 // Dashboard: Navigation, gemeinsamer Zustand und Live-Aktualisierung.
 import { api } from './api.js';
 import { toast } from './ui.js';
+import { openWizard } from './wizard.js';
 import * as overview from './views/overview.js';
 import * as printers from './views/printers.js';
 import * as overlay from './views/overlay.js';
@@ -33,6 +34,10 @@ export const app = {
   },
   hasToolchanger() {
     return (app.config?.printers || []).some((p) => p.capabilities?.toolchanger);
+  },
+  /** Einrichtungsassistent (erneut) starten. */
+  wizard() {
+    openWizard(app, () => { app.go('overview'); render(); });
   },
   go(view, params) {
     location.hash = params ? `#/${view}/${encodeURIComponent(params)}` : `#/${view}`;
@@ -76,6 +81,7 @@ try {
   await refreshHealth();
   render();
   setInterval(refreshHealth, 3000);
+  if (!app.config.setupDone) app.wizard();
 } catch (err) {
   container.textContent = `Dashboard konnte nicht geladen werden: ${err.message}`;
 }
