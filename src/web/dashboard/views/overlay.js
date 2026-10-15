@@ -1,6 +1,6 @@
 // Overlay & OBS: Branding, Overlay-Varianten (Presets), OBS-Link und Live-Vorschau.
 import { DEFAULT_ACCENT, SECTIONS, SECTION_KEYS, SOCIALS, buildOverlayUrl } from '../../shared/sections.js';
-import { copyText, field, h, segmented, select, slugify, toast } from '../ui.js';
+import { confirmDialog, copyText, field, h, segmented, select, slugify, toast } from '../ui.js';
 
 let app;
 let root;
@@ -101,10 +101,10 @@ function presetCard() {
     draw();
   }
 
-  function remove() {
+  async function remove() {
     const users = (app.config.printers || []).filter((p) => p.presetId === preset.id).map((p) => p.name);
     const note = users.length ? `\n\nVerwendet von: ${users.join(', ')} – diese nutzen danach den Standard.` : '';
-    if (!confirm(`Variante „${preset.name}" löschen?${note}`)) return;
+    if (!await confirmDialog(`Variante „${preset.name}" löschen?${note}`, { ok: 'Löschen', danger: true })) return;
     presets = presets.filter((p) => p !== preset);
     editId = '';
     markDirty();

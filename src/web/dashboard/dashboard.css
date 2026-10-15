@@ -246,3 +246,6 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent); width: 16
 .wizard-box { border: 1px solid var(--line); background: var(--panel-2); border-radius: 10px; padding: 14px; }
 .discover-item.pick { width: 100%; font: inherit; color: var(--text); background: none; cursor: pointer; text-align: left; }
 .discover-item.pick:hover, .discover-item.pick.active { border-color: var(--accent); border-style: solid; background: var(--accent-soft); }
+.wizard.confirm { width: min(440px, 100%); }
+.btn.danger-solid { background: var(--bad); border-color: var(--bad); color: #fff; }
+.btn.danger-solid:hover { filter: brightness(1.08); }

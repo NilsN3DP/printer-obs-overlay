@@ -86,3 +86,32 @@ export const TYPE_LABELS = { prusalink: 'PrusaLink', octoprint: 'OctoPrint', moo
 export const slugify = (value) => String(value || '').toLowerCase()
   .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
   .replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '');
+
+/**
+ * Eigener Bestaetigungsdialog. Browser-Dialoge (confirm) werden in OBS-Docks und
+ * eingebetteten Browsern oft unterdrueckt und liefern dann still "Abbrechen".
+ * @returns {Promise<boolean>}
+ */
+export function confirmDialog(message, { ok = 'OK', danger = false } = {}) {
+  return new Promise((resolve) => {
+    const finish = (result) => {
+      document.removeEventListener('keydown', onKey);
+      backdrop.remove();
+      resolve(result);
+    };
+    const onKey = (e) => {
+      if (e.key === 'Escape') finish(false);
+      if (e.key === 'Enter') finish(true);
+    };
+    const okButton = h('button', { class: `btn ${danger ? 'danger-solid' : 'primary'}`, onclick: () => finish(true) }, ok);
+    const backdrop = h('div', { class: 'wizard-backdrop', onclick: (e) => { if (e.target === backdrop) finish(false); } },
+      h('div', { class: 'wizard confirm', role: 'alertdialog', 'aria-modal': 'true' },
+        h('div', { class: 'wizard-body' }, h('p', { style: { margin: 0, whiteSpace: 'pre-line' } }, message)),
+        h('div', { class: 'wizard-foot' },
+          h('button', { class: 'btn ghost', onclick: () => finish(false) }, 'Abbrechen'),
+          okButton)));
+    document.addEventListener('keydown', onKey);
+    document.body.append(backdrop);
+    okButton.focus();
+  });
+}

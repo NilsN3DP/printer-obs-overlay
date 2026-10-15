@@ -1,6 +1,6 @@
 // Drucker einrichten: Liste, Formular, Verbindungstest und Netzwerksuche.
 import { api } from '../api.js';
-import { TYPE_LABELS, field, h, select, slugify, toast } from '../ui.js';
+import { TYPE_LABELS, confirmDialog, field, h, select, slugify, toast } from '../ui.js';
 
 let app;
 let draft = []; // Arbeitskopie der Drucker
@@ -183,11 +183,19 @@ function formCard() {
     }
   }
 
-  function remove() {
-    if (!p.isNew && !confirm(`„${p.name || p.id}" wirklich entfernen? OBS-Quellen mit diesem Drucker zeigen danach nichts mehr an.`)) return;
+  async function remove() {
+    if (!p.isNew) {
+      const message = `„${p.name || p.id}" wirklich entfernen?\nOBS-Quellen mit diesem Drucker zeigen danach nichts mehr an.`;
+      const sure = await confirmDialog(message, { ok: 'Entfernen', danger: true });
+      if (!sure) return;
+      // Nur das Entfernen speichern – ungespeicherte Änderungen an anderen Druckern bleiben offen.
+      const printers = (app.config.printers || []).filter((x) => !x.virtual && x.id !== p.originalId)
+        .map((x) => ({ ...x, originalId: x.id }));
+      if (!await app.save({ ...app.config, printers }, `„${p.name || p.id}" entfernt`)) return;
+    }
     draft = draft.filter((x) => x !== p);
     selectedId = draft[0]?.id || null;
-    markDirty();
+    dirty = draft.some((x) => x.isNew);
     draw();
   }
 

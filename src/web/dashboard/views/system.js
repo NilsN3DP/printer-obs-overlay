@@ -1,6 +1,6 @@
 // System: allgemeine Einstellungen, Autostart, Programminfo.
 import { api } from '../api.js';
-import { field, h, toast } from '../ui.js';
+import { confirmDialog, field, h, toast } from '../ui.js';
 
 const MODE_LABELS = { docker: 'Docker', app: 'Windows-App', obs: 'OBS-Plugin', dev: 'Entwicklung' };
 
@@ -46,7 +46,7 @@ export function render(container, app) {
     h('button', {
       class: 'btn danger',
       onclick: async () => {
-        if (!confirm('Overlay-Server jetzt beenden?')) return;
+        if (!await confirmDialog('Overlay-Server jetzt beenden?', { ok: 'Beenden', danger: true })) return;
         await api.shutdown().catch(() => {});
         document.getElementById('view').replaceChildren(h('div', { class: 'card empty' },
           h('h2', {}, 'Server beendet'), h('p', {}, 'Starte „Printer OBS Overlay" über das Startmenü erneut.')));
