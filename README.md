@@ -1,5 +1,3 @@
-<p align="center"><img src="docs/logo.png" width="96" alt=""></p>
-
 # Printer OBS Overlay
 
 OBS-Plugin, das die Live-Werte deiner 3D-Drucker als Stream-Overlay zeigt – im Prusa-Look.
